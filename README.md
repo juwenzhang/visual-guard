@@ -43,6 +43,7 @@ packages/
 
 ```bash
 pnpm install
+pnpm run openspec:check
 pnpm run typecheck
 pnpm run lint
 pnpm run build

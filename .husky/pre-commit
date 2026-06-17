@@ -1,1 +1,2 @@
+pnpm run openspec:check
 pnpm lint-staged
