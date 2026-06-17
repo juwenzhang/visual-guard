@@ -1,30 +1,27 @@
-# @app/core
+# @visual-guard/core
 
-Primary library package of the **.** monorepo.
+> Visual Guard core package
 
 ## Install
 
 ```bash
-pnpm add @app/core
+npm install @visual-guard/core
+# or
+pnpm add @visual-guard/core
 ```
 
 ## Usage
 
 ```ts
-import {Core} from '@app/core';
+import {helloCore} from '@visual-guard/core';
 
-const core = new Core({greeting: 'Hi'});
-console.log(core.greet('World')); // Hi, World!
+console.log(helloCore('reader'));
 ```
 
-## Scripts
+## Docs
 
-```bash
-pnpm build       # build dist/ via tsup
-pnpm dev         # watch-rebuild
-pnpm typecheck   # tsc --noEmit
-```
+See the full visual-guard documentation: <https://juwenzhang.github.io/visual-guard/>
 
-## Output formats
+## License
 
-`esm + cjs + umd`. Configured in `tsup.config.*`.
+[MIT](./LICENSE) © luhanxin

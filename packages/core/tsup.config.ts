@@ -1,22 +1,18 @@
 import {defineConfig} from 'tsup';
 
 /**
- * tsup config for app.
- *
- * `format` is rendered from the format-* features you selected at scaffold:
- *   esm + cjs + umd.
- *
- * Switch formats by editing the array; UMD requires `globalName` (set below).
+ * tsup build config for @visual-guard/core.
+ * - ESM-only output (matches `"type": "module"` in package.json).
+ * - Emits .d.ts via tsup's bundled dts pipeline; keep tsc for typecheck only.
+ * - No minification: published tarballs should remain readable for debugging.
  */
 export default defineConfig({
   entry: ['src/index.ts'],
-  format: ['esm', 'cjs', 'umd'],
+  format: ['esm'],
   dts: true,
-  sourcemap: true,
   clean: true,
+  sourcemap: false,
   splitting: false,
   treeshake: true,
-  globalName: 'App',
-  outExtension: ({format}) =>
-    format === 'esm' ? {js: '.mjs'} : format === 'cjs' ? {js: '.cjs'} : {js: '.umd.js'}
+  target: 'node18'
 });

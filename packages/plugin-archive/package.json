@@ -1,0 +1,52 @@
+{
+  "name": "@visual-guard/plugin-archive",
+  "version": "0.0.0",
+  "description": "Archive plugin for Visual Guard.",
+  "keywords": [
+    "visual-guard",
+    "visual-regression"
+  ],
+  "license": "MIT",
+  "author": "luhanxin",
+  "repository": {
+    "type": "git",
+    "url": "",
+    "directory": "packages/plugin-archive"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "@visual-guard/shared": "workspace:*",
+    "archiver": "^7.0.0"
+  }
+}

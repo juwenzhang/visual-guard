@@ -1,20 +1,15 @@
 /**
- * @app/core — main entry.
+ * @visual-guard/core — Visual Guard core package
  *
- * The build pipeline (tsup) emits the formats you selected at
- * scaffold: esm + cjs + umd.
+ * Replace the starter export below with the real API surface for this package.
+ * Remember to update README.md with usage examples before publishing.
  */
 
-export const VERSION = '0.0.0';
+export const coreVersion = '0.0.0';
 
-export interface CoreOptions {
-  greeting?: string;
-}
-
-export class Core {
-  constructor(private readonly options: CoreOptions = {}) {}
-
-  greet(name: string): string {
-    return `${this.options.greeting ?? 'Hello'}, ${name}!`;
-  }
+/**
+ * Example helper. Delete once you add your real implementation.
+ */
+export function helloCore(who = 'world'): string {
+  return `Hello, ${who}! (from @visual-guard/core)`;
 }

@@ -1,8 +1,8 @@
 {
-  "name": "app-monorepo",
+  "name": "visual-guard",
   "version": "0.0.0",
   "private": true,
-  "description": ". — multi-package library monorepo",
+  "description": "Automated visual regression and page quality guard monorepo",
   "type": "module",
   "packageManager": "pnpm@10.0.0",
   "engines": {
@@ -28,7 +28,12 @@
     "@commitlint/config-conventional": "^19.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
-    "typescript": "^5.4.0",
-    "tsup": "^8.3.0"
+    "tsup": "^8.3.0",
+    "typescript": "^5.4.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "human-id": "^3.0.0"
+    }
   }
 }
