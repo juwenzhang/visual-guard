@@ -69,9 +69,23 @@ const getTaskStatus = change => {
   return change.taskStatus ?? null;
 };
 
+const hasOpenSpecContent = async () => {
+  const specsDir = `${OPENSPEC_DIR}/specs`;
+  const changesDir = `${OPENSPEC_DIR}/changes`;
+
+  const [specsExists, changesExists] = await Promise.all([exists(specsDir), exists(changesDir)]);
+
+  return specsExists || changesExists;
+};
+
 const main = async () => {
   if (!(await exists(OPENSPEC_DIR))) {
     console.log('OpenSpec 未初始化，跳过校验。');
+    process.exit(SUCCESS_EXIT_CODE);
+  }
+
+  if (!(await hasOpenSpecContent())) {
+    console.log('OpenSpec 已初始化，但 specs/ 和 changes/ 目录不存在，跳过校验。');
     process.exit(SUCCESS_EXIT_CODE);
   }
 

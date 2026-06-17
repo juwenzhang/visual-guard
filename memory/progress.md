@@ -146,6 +146,30 @@ CI 约定：
 - `pnpm run openspec:check` 通过。
 - `pnpm run lint` 通过，仅剩 `biome.json` schema 版本和 deprecated 配置的 info 级提示，非本次错误。
 
+## 2026-06-17 OpenSpec 脚本修复更新
+
+本次修复 `scripts/check-openspec-tasks.mjs` 脚本，处理 `openspec/specs/` 和 `openspec/changes/` 目录不存在的情况：
+
+问题：
+
+- 空目录无法上传到 GitHub
+- 脚本在目录不存在时会报错
+
+修复方案（不添加 `.gitkeep`）：
+
+1. 新增 `hasOpenSpecContent()` 函数，检查 `specs/` 或 `changes/` 目录是否存在
+2. 如果两个目录都不存在，直接跳过校验，输出提示信息
+3. 避免强制添加 `.gitkeep` 文件
+
+验证逻辑：
+
+- 删除 `specs/` 和 `changes/` 目录后运行 `pnpm run openspec:check`：输出"OpenSpec 已初始化，但 specs/ 和 changes/ 目录不存在，跳过校验。"
+- 恢复目录后运行：输出"OpenSpec 已初始化，但没有活跃 change，校验通过。"
+
+修改文件：
+
+- `scripts/check-openspec-tasks.mjs`：新增 `hasOpenSpecContent()` 函数，修改 `main()` 逻辑
+
 ## 暂未完成事项
 
 ### 架构初始化
