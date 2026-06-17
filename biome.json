@@ -28,18 +28,7 @@
     "lineWidth": 100,
     "lineEnding": "lf"
   },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "style": {
-        "noNonNullAssertion": "warn"
-      },
-      "suspicious": {
-        "noExplicitAny": "error"
-      }
-    }
-  },
+  "linter": {},
   "overrides": [
     {
       "includes": ["**/*.vue"],
