@@ -206,15 +206,127 @@ CI 约定：
 - [ ] 实现 Console / JSON / HTML reporter。
 - [ ] 实现 CLI `run`、`init`、`baseline list`、`baseline clean`。
 
+## 2026-06-18 共享层类型定义完成
+
+本次完成了 `@visual-guard/shared` 包的类型定义和工具函数实现：
+
+### 创建的类型文件
+
+1. **引擎类型** (`types/engine.ts`)：
+   - `BrowserEngineName`：浏览器引擎名称类型
+   - `EngineLaunchOptions`：引擎启动选项
+   - `EngineContextOptions`：引擎上下文选项
+   - `GotoOptions`：页面跳转选项
+   - `WaitOptions`：等待选项
+   - `ScreenshotOptions`：截图选项
+   - `CookieInput`：Cookie 输入类型
+   - `BrowserEngineAdapter`：浏览器引擎适配器接口
+   - `EngineRuntime`：引擎运行时接口
+   - `EngineContext`：引擎上下文接口
+   - `EnginePage`：引擎页面接口
+
+2. **配置类型** (`types/config.ts`)：
+   - `ViewportConfig`：视口配置
+   - `BrowserConfig`：浏览器配置
+   - `DiffConfig`：对比配置
+   - `PerformanceBudget`：性能预算
+   - `PerformanceConfig`：性能配置
+   - `SceneConfig`：场景配置
+   - `VisualGuardConfig`：主配置
+   - `PluginConfig`：插件配置
+
+3. **快照类型** (`types/snapshot.ts`)：
+   - `DomNodeSnapshot`：DOM 节点快照
+   - `NetworkRecord`：网络记录
+   - `PerformanceMetrics`：性能指标
+   - `AccessibilitySnapshot`：无障碍树快照
+   - `Snapshot`：页面快照
+
+4. **基线类型** (`types/baseline.ts`)：
+   - `BaselineKey`：基线键
+   - `BaselineMeta`：基线元信息
+   - `BaselineBundle`：基线包
+   - `BaselineQuery`：基线查询
+   - `CleanPolicy`：清理策略
+   - `BaselineStore`：基线存储接口
+
+5. **Diff 类型** (`types/diff.ts`)：
+   - `ScenarioStatus`：场景状态
+   - `RuntimeError`：运行时错误
+   - `PixelDiffResult`：像素对比结果
+   - `DomDiffResult`：DOM 对比结果
+   - `LayoutDiffResult`：布局对比结果
+   - `NetworkDiffResult`：网络对比结果
+   - `PerformanceDiffResult`：性能对比结果
+   - `ScenarioResult`：场景结果
+   - `DiffManifest`：统一输出协议
+
+6. **插件类型** (`types/plugin.ts`)：
+   - `HookName`：生命周期钩子名称
+   - `HookContext`：钩子上下文
+   - `HookHandler`：钩子处理函数
+   - `PluginAPI`：插件 API
+   - `VisualGuardPlugin`：插件接口
+
+### 创建的工具函数
+
+1. **通用工具** (`utils/index.ts`)：
+   - `sleep(ms)`：睡眠/等待函数
+   - `retry(fn, options)`：重试函数
+   - `hash(str)`：计算字符串哈希值
+   - `stableStringify(obj)`：稳定序列化对象
+
+2. **路径工具** (`path/index.ts`)：
+   - `generateBaselinePath(key, baseDir)`：生成基线存储路径
+   - `generateScreenshotPath(basePath, type, elementName)`：生成截图路径
+   - `generateReportPath(outputDir, runId, format)`：生成报告路径
+   - `generateSceneUrl(baseUrl, scene)`：生成场景 URL
+   - `normalizePath(inputPath)`：规范化路径
+
+3. **日志工具** (`logger/index.ts`)：
+   - `LogLevel`：日志级别枚举
+   - `createLogger(options)`：创建日志记录器
+   - `logger`：默认日志记录器实例
+   - `useLogger(tag)`：带标签的日志记录器工厂
+
+### 修复的问题
+
+1. 修复 `types/engine.ts` 错误导入 `BrowserEngineName` 的问题
+2. 修复 `utils/index.ts` 缺少 `RetryOptions` 类型定义的问题
+3. 修复 `logger/index.ts` 使用不支持的 `fancy` 选项的问题
+4. 修复 `path/index.ts` 未使用参数的问题
+5. 修复 `types/baseline.ts` 未使用导入的问题
+6. 修复 `index.ts` 导出组织问题
+7. 修复 `types/plugin.ts` 导入组织问题
+
+### 验证结果
+
+- ✅ TypeScript 类型检查通过
+- ✅ Biome lint 检查通过
+- ✅ 所有类型正确导出
+
+### 修改文件
+
+- `packages/shared/src/types/engine.ts`：新增引擎相关类型
+- `packages/shared/src/types/config.ts`：新增配置相关类型
+- `packages/shared/src/types/snapshot.ts`：新增快照相关类型
+- `packages/shared/src/types/baseline.ts`：新增基线相关类型
+- `packages/shared/src/types/diff.ts`：新增 Diff 相关类型
+- `packages/shared/src/types/plugin.ts`：新增插件相关类型
+- `packages/shared/src/utils/index.ts`：新增工具函数
+- `packages/shared/src/path/index.ts`：新增路径工具
+- `packages/shared/src/logger/index.ts`：新增日志工具
+- `packages/shared/src/index.ts`：更新主入口文件，导出所有类型和工具
+
 ## 建议下一步
 
-下一步建议仍然不写复杂业务逻辑，只做“架构初始化提交”：
+共享层类型定义已完成，建议继续完成其他基础包：
 
-1. 创建缺失包目录和空入口文件。
-2. 先把核心协议类型落在共享包里。
-3. 让所有包可以 `pnpm build` / `pnpm typecheck`。
-4. 更新 `README.md`，说明项目目标、包结构和开发命令。
-5. 更新本文件，记录初始化完成情况和下一阶段任务。
+1. **`@visual-guard/config` 包**：实现配置加载、默认值合并、环境变量覆盖和校验
+2. **`@visual-guard/core` 包**：实现核心执行流程（场景解析、采集、对比、报告）
+3. **`@visual-guard/engine-playwright` 包**：实现 Playwright 引擎适配器
+4. **`@visual-guard/cli` 包**：实现命令行入口
+5. **`@visual-guard/reporters` 包**：实现报告输出
 
 ## 命令执行约定
 
