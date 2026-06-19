@@ -41,6 +41,7 @@ const capabilities: EngineCapabilities = {
   consoleListening: true,
   multiContext: false,
   lighthouse: false,
+  cdpAccess: false,
   cookies: true,
   extraHTTPHeaders: false
 };
