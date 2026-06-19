@@ -162,8 +162,8 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             await store.write(key, newBundle);
           }
 
-          if (isFirstRun) {
-            // 首次运行：仅建立基线
+          if (shouldWrite) {
+            // 首次运行或显式更新基线：写入后不再与旧基线对比
             const result: ScenarioResult = {
               id: scene.id,
               name: scene.scene.name,

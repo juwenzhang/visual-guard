@@ -18,6 +18,6 @@
     "@visual-guard/engine-puppeteer": "workspace:*",
     "cypress": "^13.0.0",
     "playwright": "^1.48.0",
-    "puppeteer": "^21.11.0"
+    "puppeteer-core": "^24.31.0"
   }
 }

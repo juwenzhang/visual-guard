@@ -15,10 +15,13 @@ pnpm guard:run
 pnpm guard:run
 
 # 更新基线
-pnpm guard:run -- --write-baseline
+pnpm guard:run --write-baseline
 
 # 查看基线列表
 pnpm guard:baseline
+
+# 查看基线截图
+open .visual-guard/baselines/my-web-app/development/main/home@desktop/desktop/screenshots/full.png
 
 # 清理旧基线（预览模式）
 pnpm guard:clean
@@ -30,9 +33,9 @@ pnpm guard:clean
 |------|------|------|
 | Playwright | ✅ 推荐 | 当前主线，稳定跑通 |
 | Cypress | 🟡 桥接规划中 | 后续通过 Cypress spec + task 输出采集产物 |
-| Puppeteer | ⚠️ 实验/暂停 | 已确认在多版本、Chrome 缓存、headless、连接生命周期上不稳定 |
+| Puppeteer | ⚠️ 实验/再评估 | 示例默认使用 `puppeteer-core@^24.31.0`，避免安装阶段下载 Chrome；`puppeteer@25` 需要 Node >= 22.12，暂不作为默认 |
 
-本示例会声明所有引擎 peer 依赖，方便验证安装关系；但实际执行建议使用 Playwright：
+本示例会声明主线和实验引擎依赖，方便验证安装关系；但实际执行建议使用 Playwright：
 
 ```bash
 pnpm guard:run
@@ -44,11 +47,20 @@ Cypress 当前走桥接模式，会先生成 Cypress spec/config，再执行 Cyp
 pnpm guard:run:cypress
 ```
 
-Puppeteer 保留脚本但不作为主线验证：
+Puppeteer 保留脚本但不作为主线验证。示例默认使用 `puppeteer-core`，适配器会自动查找本机常见 Chrome / Chromium 路径：
 
 ```bash
 pnpm guard:run:puppeteer
 ```
+
+如果自动查找失败，可手动指定路径：
+
+```bash
+PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  pnpm guard:run:puppeteer
+```
+
+如果希望安装阶段自动下载兼容 Chrome，可把示例依赖从 `puppeteer-core` 改为 `puppeteer`，并移除 `.npmrc` 里的 `PUPPETEER_SKIP_DOWNLOAD=true`。
 
 ## 配置要点
 

@@ -52,7 +52,7 @@ export function createRunCommand(): Command {
       }
 
       // 执行
-      const writeBaseline = options['write-baseline'] === true;
+      const writeBaseline = options['writeBaseline'] === true || options['write-baseline'] === true;
       let manifest: Awaited<ReturnType<typeof run>>;
 
       try {
