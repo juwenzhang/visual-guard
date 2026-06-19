@@ -1,0 +1,55 @@
+{
+  "$schema": "https://raw.githubusercontent.com/visual-guard/schema/main/visualguard.config.json",
+  "project": "my-web-app",
+  "env": "development",
+  "baseUrl": "https://www.baidu.com",
+  "renderMode": "auto",
+  "outputDir": ".visual-guard/reports",
+  "baselineDir": ".visual-guard/baselines",
+  "concurrency": 1,
+  "timeout": 30000,
+  "browser": {
+    "engine": "playwright",
+    "headless": true,
+    "launchOptions": {
+      "args": ["--ignore-certificate-errors", "--disable-web-security"]
+    }
+  },
+  "viewport": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 800,
+      "deviceScaleFactor": 1,
+      "isMobile": false
+    }
+  ],
+  "diff": {
+    "pixel": {
+      "threshold": 0.1,
+      "maxDiffRatio": 0.01,
+      "includeAA": true
+    },
+    "layout": {
+      "maxDistance": 4
+    }
+  },
+  "scenarios": [
+    {
+      "id": "home",
+      "name": "首页",
+      "path": "/",
+      "tags": ["smoke"],
+      "waitForSelector": "body"
+    },
+    {
+      "id": "about",
+      "name": "关于页",
+      "path": "/about",
+      "tags": ["smoke"],
+      "waitForSelector": "body",
+      "waitForTimeout": 2000
+    }
+  ],
+  "reporters": ["console", "json", "html"]
+}

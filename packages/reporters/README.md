@@ -1,27 +1,23 @@
 # @visual-guard/reporters
 
-> Visual Guard reporters package
+Visual Guard 报告输出包。
 
-## Install
+## 报告类型
 
-```bash
-npm install @visual-guard/reporters
-# or
-pnpm add @visual-guard/reporters
-```
+- `generateConsoleReport`：终端摘要，包含基线建立 / 通过 / 差异 / 错误提示
+- `generateJsonReport`：输出 `manifest.json`
+- `generateHtmlReport`：输出可视化 HTML 报告
 
-## Usage
+## 使用
 
 ```ts
-import {helloReporters} from '@visual-guard/reporters';
+import { generateConsoleReport, generateHtmlReport, generateJsonReport } from '@visual-guard/reporters';
 
-console.log(helloReporters('reader'));
+const text = generateConsoleReport(manifest, reportFiles);
+await generateJsonReport(manifest, '.visual-guard/reports', manifest.run.id);
+await generateHtmlReport(manifest, '.visual-guard/reports', manifest.run.id);
 ```
 
-## Docs
+## 输入协议
 
-See the full visual-guard documentation: <https://juwenzhang.github.io/visual-guard/>
-
-## License
-
-[MIT](./LICENSE) © luhanxin
+所有 reporter 只消费 `DiffManifest`，不依赖 runner 内部实现。

@@ -1,15 +1,18 @@
-/**
- * @visual-guard/config — Visual Guard config package
- *
- * Replace the starter export below with the real API surface for this package.
- * Remember to update README.md with usage examples before publishing.
- */
+export type {
+  BrowserConfig,
+  DiffConfig,
+  ReporterType,
+  SceneConfig,
+  ViewportConfig,
+  VisualGuardConfig
+} from '@visual-guard/shared';
+// 默认配置
+export {DEFAULT_CONFIG, REQUIRED_FIELDS} from './defaults';
 
-export const configVersion = '0.0.0';
-
-/**
- * Example helper. Delete once you add your real implementation.
- */
-export function helloConfig(who = 'world'): string {
-  return `Hello, ${who}! (from @visual-guard/config)`;
-}
+// 环境变量覆盖
+export {applyEnvOverrides} from './env-override';
+// 配置加载
+// 配置合并工具
+export {loadConfig, shallowMerge as mergeConfig} from './load';
+// 配置校验
+export {assertValidConfig, validateConfig} from './validate';

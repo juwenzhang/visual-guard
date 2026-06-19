@@ -14,5 +14,6 @@ export default defineConfig({
   sourcemap: false,
   splitting: false,
   treeshake: true,
-  target: 'node18'
+  target: 'node18',
+  minify: true
 });

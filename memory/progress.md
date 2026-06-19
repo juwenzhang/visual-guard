@@ -206,15 +206,396 @@ CI 约定：
 - [ ] 实现 Console / JSON / HTML reporter。
 - [ ] 实现 CLI `run`、`init`、`baseline list`、`baseline clean`。
 
+## 2026-06-18 共享层类型定义完成
+
+本次完成了 `@visual-guard/shared` 包的类型定义和工具函数实现：
+
+### 创建的类型文件
+
+1. **引擎类型** (`types/engine.ts`)：
+   - `BrowserEngineName`：浏览器引擎名称类型
+   - `EngineLaunchOptions`：引擎启动选项
+   - `EngineContextOptions`：引擎上下文选项
+   - `GotoOptions`：页面跳转选项
+   - `WaitOptions`：等待选项
+   - `ScreenshotOptions`：截图选项
+   - `CookieInput`：Cookie 输入类型
+   - `BrowserEngineAdapter`：浏览器引擎适配器接口
+   - `EngineRuntime`：引擎运行时接口
+   - `EngineContext`：引擎上下文接口
+   - `EnginePage`：引擎页面接口
+
+2. **配置类型** (`types/config.ts`)：
+   - `ViewportConfig`：视口配置
+   - `BrowserConfig`：浏览器配置
+   - `DiffConfig`：对比配置
+   - `PerformanceBudget`：性能预算
+   - `PerformanceConfig`：性能配置
+   - `SceneConfig`：场景配置
+   - `VisualGuardConfig`：主配置
+   - `PluginConfig`：插件配置
+
+3. **快照类型** (`types/snapshot.ts`)：
+   - `DomNodeSnapshot`：DOM 节点快照
+   - `NetworkRecord`：网络记录
+   - `PerformanceMetrics`：性能指标
+   - `AccessibilitySnapshot`：无障碍树快照
+   - `Snapshot`：页面快照
+
+4. **基线类型** (`types/baseline.ts`)：
+   - `BaselineKey`：基线键
+   - `BaselineMeta`：基线元信息
+   - `BaselineBundle`：基线包
+   - `BaselineQuery`：基线查询
+   - `CleanPolicy`：清理策略
+   - `BaselineStore`：基线存储接口
+
+5. **Diff 类型** (`types/diff.ts`)：
+   - `ScenarioStatus`：场景状态
+   - `RuntimeError`：运行时错误
+   - `PixelDiffResult`：像素对比结果
+   - `DomDiffResult`：DOM 对比结果
+   - `LayoutDiffResult`：布局对比结果
+   - `NetworkDiffResult`：网络对比结果
+   - `PerformanceDiffResult`：性能对比结果
+   - `ScenarioResult`：场景结果
+   - `DiffManifest`：统一输出协议
+
+6. **插件类型** (`types/plugin.ts`)：
+   - `HookName`：生命周期钩子名称
+   - `HookContext`：钩子上下文
+   - `HookHandler`：钩子处理函数
+   - `PluginAPI`：插件 API
+   - `VisualGuardPlugin`：插件接口
+
+### 创建的工具函数
+
+1. **通用工具** (`utils/index.ts`)：
+   - `sleep(ms)`：睡眠/等待函数
+   - `retry(fn, options)`：重试函数
+   - `hash(str)`：计算字符串哈希值
+   - `stableStringify(obj)`：稳定序列化对象
+
+2. **路径工具** (`path/index.ts`)：
+   - `generateBaselinePath(key, baseDir)`：生成基线存储路径
+   - `generateScreenshotPath(basePath, type, elementName)`：生成截图路径
+   - `generateReportPath(outputDir, runId, format)`：生成报告路径
+   - `generateSceneUrl(baseUrl, scene)`：生成场景 URL
+   - `normalizePath(inputPath)`：规范化路径
+
+3. **日志工具** (`logger/index.ts`)：
+   - `LogLevel`：日志级别枚举
+   - `createLogger(options)`：创建日志记录器
+   - `logger`：默认日志记录器实例
+   - `useLogger(tag)`：带标签的日志记录器工厂
+
+### 修复的问题
+
+1. 修复 `types/engine.ts` 错误导入 `BrowserEngineName` 的问题
+2. 修复 `utils/index.ts` 缺少 `RetryOptions` 类型定义的问题
+3. 修复 `logger/index.ts` 使用不支持的 `fancy` 选项的问题
+4. 修复 `path/index.ts` 未使用参数的问题
+5. 修复 `types/baseline.ts` 未使用导入的问题
+6. 修复 `index.ts` 导出组织问题
+7. 修复 `types/plugin.ts` 导入组织问题
+
+### 验证结果
+
+- ✅ TypeScript 类型检查通过
+- ✅ Biome lint 检查通过
+- ✅ 所有类型正确导出
+
+### 修改文件
+
+- `packages/shared/src/types/engine.ts`：新增引擎相关类型
+- `packages/shared/src/types/config.ts`：新增配置相关类型
+- `packages/shared/src/types/snapshot.ts`：新增快照相关类型
+- `packages/shared/src/types/baseline.ts`：新增基线相关类型
+- `packages/shared/src/types/diff.ts`：新增 Diff 相关类型
+- `packages/shared/src/types/plugin.ts`：新增插件相关类型
+- `packages/shared/src/utils/index.ts`：新增工具函数
+- `packages/shared/src/path/index.ts`：新增路径工具
+- `packages/shared/src/logger/index.ts`：新增日志工具
+- `packages/shared/src/index.ts`：更新主入口文件，导出所有类型和工具
+
+## 2026-06-19 端到端链路闭环（CLI + Reporters）
+
+本次完成了 CLI 和 Reporters 包的实现，打通端到端链路：
+
+### `@visual-guard/reporters` 包
+
+新增三个报告器：
+
+1. **Console Reporter** (`src/console.ts`)：
+   - 彩色终端摘要输出（chalk）
+   - 运行信息、汇总统计、差异统计、场景详情
+
+2. **JSON Reporter** (`src/json.ts`)：
+   - 将 `DiffManifest` 序列化为 `manifest.json`
+   - 按 `outputDir/runId/` 目录组织
+
+3. **HTML Reporter** (`src/html.ts`)：
+   - 生成可视化 HTML 报告
+   - 包含场景概览卡片、状态标签、进度条、场景详情表格
+   - 响应式布局，现代化 UI
+
+### `@visual-guard/cli` 包
+
+实现 `visual-guard run` 命令（`src/commands/run.ts`）：
+
+- `--config <path>`：指定配置文件路径
+- `--engine <engine>`：覆盖浏览器引擎
+- `--env <env>`：覆盖环境名称
+- `--format <format>`：报告格式（console/json/html，逗号分隔）
+- 退出码：0=无差异，1=有差异，2=执行异常
+
+入口：
+- `src/index.ts`：commander 程序定义
+- `bin/visual-guard.mjs`：可执行脚本
+
+### 示例配置
+
+新增 `examples/basic/visualguard.config.json`：
+- 项目名 `demo-site`，环境 `local`
+- 单视口 1280×800 desktop
+- 单场景首页，reporter 三格式输出
+
+### 依赖更新
+
+- `@visual-guard/reporters`：新增 `chalk` 依赖
+- `@visual-guard/cli`：新增 `bin` 入口，依赖 `@visual-guard/engine-playwright`
+
+### 验证结果
+
+- ✅ `typecheck` 全部 12 包通过
+- ✅ `lint` 零错误
+- ✅ `build` 全部 12 包通过
+
+## 2026-06-19 报告与首次运行体验优化
+
+问题：首次运行无基线时 diff 返回 undefined，状态显示「通过」毫无意义；控制台输出不告诉用户下一步该做什么；JSON/HTML 报告未生成。
+
+### 类型层修改
+
+- `ScenarioStatus` 新增 `'baseline'` 状态
+- `Summary` 新增 `baseline` 字段
+
+### Runner 层修改
+
+- 首次运行（无基线）：直接返回 `status: 'baseline'`，跳过所有 diff 计算
+- 后续运行：正常执行对比流程
+- `launchOptions` 透传：合并用户配置的 `browser.launchOptions.args` 到引擎启动参数
+
+### Console Reporter 重写
+
+- 精简摘要输出，区分「基线建立」「通过」「有变化」「错误」四种场景
+- 首次全天基线时显示 `📌 这是首次运行，已为所有场景建立基线。修改页面后再次运行即可检测视觉变化。`
+- 底部列出所有已生成的报告文件路径
+- 有差异时提示 `⚠ 检测到视觉差异，请检查报告文件了解详情。`
+
+### HTML Reporter 更新
+
+- 新增 `baseline` 状态标签和蓝色样式
+
+### CLI 修改
+
+- 报告生成顺序调整：先 JSON/HTML，后 Console（确保 Console 能列出文件路径）
+- `generateConsoleReport` 新增第二个参数 `reportFiles: string[]`
+
+---
+
+## 2026-06-19 writeBaseline 模式开关
+
+问题：runner 每次运行都覆盖基线，导致第二次运行对比的是「上次结果」而非「初始基线」。
+
+### RunnerOptions 新增字段
+
+```ts
+export interface RunnerOptions {
+  // ...
+  writeBaseline?: boolean;
+}
+```
+
+### Runner 写入逻辑
+
+| 场景 | 是否写基线 |
+|------|-----------|
+| 首次运行（无现有基线） | ✅ 强制写入 |
+| 后续运行，未传 `--write-baseline` | ❌ 不写（只对比） |
+| 后续运行，传 `--write-baseline` | ✅ 覆盖旧基线 |
+
+### CLI 更新
+
+- `--write-baseline` 描述修正为「更新基线，后续运行以此为对比基准」
+- 解析布尔值并传递给 `runner({ writeBaseline })`
+
+---
+
+## 2026-06-19 CLI 子命令扩展（init + baseline）
+
+### `visual-guard init` — 交互式配置生成
+
+新增 `packages/cli/src/commands/init.ts`，使用 `@inquirer/prompts` 逐步询问：
+
+1. 项目名称（默认当前目录名）
+2. 被测页面根地址（URL 校验）
+3. 浏览器引擎（playwright/puppeteer/cypress）
+4. 无头模式
+5. 场景列表（可添加多个，每个含名称+路径，自动生成 id）
+6. 报告格式组合
+
+生成 `visualguard.config.json` 后提示 `visual-guard run` 命令。
+
+### `visual-guard baseline list` — 基线列表
+
+新增命令，列出所有基线，带筛选参数：
+- `-p, --project` 按项目筛选
+- `-e, --env` 按环境筛选
+- `-b, --branch` 按分支筛选
+
+输出包含：项目/环境/分支、场景、视口、创建/更新时间、DOM/截图大小。
+
+### `visual-guard baseline clean` — 基线清理
+
+新增命令，清理旧基线：
+- `--keep <n>` 保留最近 N 条（默认 20）
+- `--older-than <days>` 删除 N 天前的
+- `--dry-run` 预览模式
+
+### 依赖更新
+
+- `@visual-guard/cli` 新增 `@inquirer/prompts` 依赖
+
+### 验证结果
+
+- ✅ `typecheck` 全部通过
+- ✅ `lint` 仅 info，无 error
+- ✅ `build` 全部通过
+
+## 当前架构状态
+
+```
+配置层 ✅  @visual-guard/config         loadConfig + zod 校验 + 环境变量覆盖
+共享层 ✅  @visual-guard/shared        类型 + 工具函数 + 日志 + 路径
+核心层 ✅  @visual-guard/core           runner + capture + diff + baseline + writeBaseline 模式
+引擎层 ✅  @visual-guard/engine-playwright  SSR 适配 + Playwright 封装
+        ⚪  @visual-guard/engine-puppeteer  骨架待实现
+        ⚪  @visual-guard/engine-cypress    骨架待实现
+CLI 层 ✅  @visual-guard/cli             run 命令 + --write-baseline + 退出码
+报告层 ✅  @visual-guard/reporters       Console/JSON/HTML + baseline 状态 + 操作指引
+插件层 ⚪  plugin-notify/plugin-ai/plugin-perf/plugin-archive  骨架
+```
+
+**端到端链路已可运行：**
+```bash
+cd examples/basic
+visual-guard run -c visualguard.config.json              # 首次：建立基线
+visual-guard run -c visualguard.config.json              # 后续：对比基线
+visual-guard run -c visualguard.config.json --write-baseline  # 更新基线
+```
+
+---
+
+## 2026-06-19 Puppeteer 引擎适配器 + CLI 优化
+
+### `@visual-guard/engine-puppeteer` 完整实现
+
+参照 `engine-playwright` 完整实现 Puppeteer 适配器，包含：
+- Browser → BrowserContext → Page 三层封装
+- SSR 模式：跳过 networkidle、跳过事件监听
+- 视口设置、cookie 注入、extraHeaders 注入
+- 截图（全页 + 元素）、DOM 快照、网络/控制台事件监听
+- 能力声明与 playwright 完全同构
+
+### 类型桩方案
+
+因 Puppeteer 要求 Node >= 22，当前环境 Node 20，使用 `puppeteer.d.ts` 类型声明桩保证编译通过。用户安装 puppeteer 后真实类型自动覆盖。
+
+### CLI 优化
+
+- `version` / `description` 改为从 `package.json` 动态读取
+- `_loadAdapter` 支持 `puppeteer` 引擎切换
+
+### 依赖更新
+
+- `@visual-guard/cli` 新增 `@visual-guard/engine-puppeteer` 依赖
+
+### 验证结果
+
+- ✅ `typecheck` 全部通过
+- ✅ `lint` 零错误
+- ✅ `build` 全部通过
+
+## 当前架构状态
+
+```
+配置层 ✅  @visual-guard/config         loadConfig + zod + 环境变量覆盖
+共享层 ✅  @visual-guard/shared        类型 + 工具 + 日志 + 路径
+核心层 ✅  @visual-guard/core           runner + capture + diff + baseline + writeBaseline
+引擎层 ✅  @visual-guard/engine-playwright  SSR 适配 + Playwright 封装
+        ✅  @visual-guard/engine-puppeteer  完整 Puppeteer 适配（已实现）
+        ⚪  @visual-guard/engine-cypress    骨架待实现
+CLI 层 ✅  @visual-guard/cli             run/init/baseline + 双引擎 + 动态版本号
+报告层 ✅  @visual-guard/reporters       Console/JSON/HTML + baseline 状态
+插件层 ⚪  plugin-* (4 个骨架)
+```
+
+**双引擎已可切换：**
+```bash
+visual-guard run --engine playwright   # 默认
+visual-guard run --engine puppeteer    # 可选
+```
+
+---
+
+## 2026-06-19 引擎路线重新规划：暂停 Puppeteer，转向 Cypress 桥接
+
+### 决策
+
+Puppeteer 在当前 monorepo + Node 20 + Chrome for Testing 环境下出现多类底层不稳定问题：
+
+- 多版本 `puppeteer` / `puppeteer-core` 解析源不一致
+- Chrome revision 与缓存目录容易错配
+- `headless: true` / `headless: 'new'` 行为差异明显
+- `ECONNRESET`、`Navigating frame was detached`、`Protocol error: Connection closed` 等底层连接问题
+- 与 Playwright 的稳定 BrowserContext/Page 生命周期差异较大
+
+因此：
+
+- `engine-playwright` 继续作为主线稳定引擎
+- `engine-puppeteer` 保留实验包，但暂停主线投入
+- `engine-cypress` 转为后续重点，但采用 **Cypress spec + cy.task 桥接方案**，不强行复刻 Page API
+- 当前阶段只支持 macOS / Linux，暂不适配 Windows
+
+### Cypress 当前实现
+
+新增 `@visual-guard/engine-cypress` 的 adapter 边界：
+
+- 声明 Cypress 能力和限制
+- `visual-guard run --engine cypress` 会明确提示当前是桥接模式
+- 后续实现方向：生成 Cypress spec，通过 `cy.visit` / `cy.screenshot` / `cy.task` 输出采集产物
+
+### 文档更新
+
+- 根 `README.md` 重写当前状态、引擎策略、路线图
+- `examples/standalone/README.md` 说明 Playwright 主线、Cypress 桥接规划、Puppeteer 暂停
+- `examples/standalone/package.json` 增加 `engine-cypress` / `cypress` peer 示例和 `guard:run:cypress` 脚本
+
+### 验证结果
+
+- ✅ `typecheck` 通过
+- ✅ `lint` 通过
+- ✅ `build` 通过
+- ✅ `pnpm guard:run:cypress` 输出清晰桥接提示
+
 ## 建议下一步
 
-下一步建议仍然不写复杂业务逻辑，只做“架构初始化提交”：
-
-1. 创建缺失包目录和空入口文件。
-2. 先把核心协议类型落在共享包里。
-3. 让所有包可以 `pnpm build` / `pnpm typecheck`。
-4. 更新 `README.md`，说明项目目标、包结构和开发命令。
-5. 更新本文件，记录初始化完成情况和下一阶段任务。
+| 优先级 | 工作 | 说明 |
+|--------|------|------|
+| P1 | **Cypress 采集桥接设计** | 明确 spec 生成、cy.task 通信、产物目录协议 |
+| P2 | **CI 集成示例** | GitHub Actions / GitLab CI 模板 |
+| P3 | **插件激活** | plugin-notify / plugin-perf 从骨架到实现 |
 
 ## 命令执行约定
 

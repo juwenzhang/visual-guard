@@ -1,0 +1,23 @@
+{
+  "name": "standalone-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Visual Guard 独立工程示例 — 模拟真实用户从安装到运行的完整流程",
+  "scripts": {
+    "guard:init": "visual-guard init",
+    "guard:run": "visual-guard run",
+    "guard:run:cypress": "visual-guard cypress run --browser electron",
+    "guard:run:puppeteer": "visual-guard run --engine puppeteer",
+    "guard:baseline": "visual-guard baseline list",
+    "guard:clean": "visual-guard baseline clean --dry-run"
+  },
+  "devDependencies": {
+    "@visual-guard/cli": "workspace:*",
+    "@visual-guard/engine-cypress": "workspace:*",
+    "@visual-guard/engine-playwright": "workspace:*",
+    "@visual-guard/engine-puppeteer": "workspace:*",
+    "cypress": "^13.0.0",
+    "playwright": "^1.48.0",
+    "puppeteer": "^21.11.0"
+  }
+}

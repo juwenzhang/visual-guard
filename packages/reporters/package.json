@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@visual-guard/shared": "workspace:*",
+    "chalk": "^5.4.0",
     "fs-extra": "^11.3.0"
   }
 }

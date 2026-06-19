@@ -1,27 +1,17 @@
 # @visual-guard/plugin-perf
 
-> Visual Guard plugin-perf package
+性能检测插件包（规划中）。
 
-## Install
+## 目标能力
 
-```bash
-npm install @visual-guard/plugin-perf
-# or
-pnpm add @visual-guard/plugin-perf
-```
+- Lighthouse 集成
+- FCP / LCP / CLS / TTFB 指标采集
+- 性能预算检查
+- 资源大小统计
+- 性能趋势与回归告警
 
-## Usage
+## 设计原则
 
-```ts
-import {helloPluginPerf} from '@visual-guard/plugin-perf';
+性能能力不放入 core，避免核心链路过重；通过 `PluginAPI` 在 `afterCapture` / `afterCompare` 阶段接入。
 
-console.log(helloPluginPerf('reader'));
-```
-
-## Docs
-
-See the full visual-guard documentation: <https://juwenzhang.github.io/visual-guard/>
-
-## License
-
-[MIT](./LICENSE) © luhanxin
+当前包仍为骨架。

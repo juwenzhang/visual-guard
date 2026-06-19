@@ -14,5 +14,11 @@ export default defineConfig({
   sourcemap: false,
   splitting: false,
   treeshake: true,
-  target: 'node18'
+  target: 'node18',
+  // 引擎包运行时动态加载，不打包进 CLI
+  external: [
+    '@visual-guard/engine-playwright',
+    '@visual-guard/engine-puppeteer',
+    '@visual-guard/engine-cypress'
+  ]
 });

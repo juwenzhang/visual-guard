@@ -1,27 +1,29 @@
 # @visual-guard/plugin-notify
 
-> Visual Guard plugin-notify package
+通知插件包（规划中）。
 
-## Install
+## 目标能力
 
-```bash
-npm install @visual-guard/plugin-notify
-# or
-pnpm add @visual-guard/plugin-notify
-```
+- 企业微信机器人
+- 飞书机器人
+- 钉钉机器人
+- 邮件通知
 
-## Usage
+## 设计原则
+
+插件只消费 `DiffManifest` 和 `PluginAPI`，不直接访问 core 内部状态。
+
+## 计划
 
 ```ts
-import {helloPluginNotify} from '@visual-guard/plugin-notify';
+import { createNotifyPlugin } from '@visual-guard/plugin-notify';
 
-console.log(helloPluginNotify('reader'));
+plugins: [
+  createNotifyPlugin({
+    channels: ['wecom'],
+    webhook: process.env.VG_NOTIFY_WEBHOOK,
+  }),
+]
 ```
 
-## Docs
-
-See the full visual-guard documentation: <https://juwenzhang.github.io/visual-guard/>
-
-## License
-
-[MIT](./LICENSE) © luhanxin
+当前包仍为骨架，后续在插件系统落地后实现。

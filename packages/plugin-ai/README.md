@@ -1,27 +1,18 @@
 # @visual-guard/plugin-ai
 
-> Visual Guard plugin-ai package
+AI 差异分析插件包（规划中）。
 
-## Install
+## 目标能力
 
-```bash
-npm install @visual-guard/plugin-ai
-# or
-pnpm add @visual-guard/plugin-ai
-```
+- 截图差异解释
+- DOM 变化摘要
+- 变化分类（样式 / 文案 / 布局 / 资源）
+- 修复建议生成
 
-## Usage
+## 设计原则
 
-```ts
-import {helloPluginAi} from '@visual-guard/plugin-ai';
+- 只分析失败或 changed 场景，避免成本失控
+- 消费 `DiffManifest`，不侵入 core
+- 图片和 DOM 需压缩后再交给模型
 
-console.log(helloPluginAi('reader'));
-```
-
-## Docs
-
-See the full visual-guard documentation: <https://juwenzhang.github.io/visual-guard/>
-
-## License
-
-[MIT](./LICENSE) © luhanxin
+当前包仍为骨架，后续在插件 API 稳定后实现。
