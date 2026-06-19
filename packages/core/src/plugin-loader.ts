@@ -5,11 +5,21 @@ import {logger} from '@visual-guard/shared';
 import {PluginEventBus} from './plugin-event-bus';
 import type {PluginAPI, VisualGuardPlugin} from './types';
 
+/** Plugin 名称常量（SSOT） */
+export const PLUGIN_NAMES = {
+  AI: 'ai',
+  PERF: 'perf',
+  NOTIFY: 'notify',
+  ARCHIVE: 'archive'
+} as const;
+
+export type PluginName = (typeof PLUGIN_NAMES)[keyof typeof PLUGIN_NAMES];
+
 const PLUGIN_PACKAGE_MAP: Record<string, string> = {
-  ai: '@visual-guard/plugin-ai',
-  perf: '@visual-guard/plugin-perf',
-  notify: '@visual-guard/plugin-notify',
-  archive: '@visual-guard/plugin-archive'
+  [PLUGIN_NAMES.AI]: '@visual-guard/plugin-ai',
+  [PLUGIN_NAMES.PERF]: '@visual-guard/plugin-perf',
+  [PLUGIN_NAMES.NOTIFY]: '@visual-guard/plugin-notify',
+  [PLUGIN_NAMES.ARCHIVE]: '@visual-guard/plugin-archive'
 };
 
 /**
@@ -49,7 +59,6 @@ export async function loadPlugins(
           ? await (raw as () => VisualGuardPlugin)()
           : (raw as VisualGuardPlugin);
 
-      // 构造 PluginAPI
       const api: PluginAPI = {
         on: (name, handler) => bus.on(name, handler),
         off: (name, handler) => bus.off(name, handler),

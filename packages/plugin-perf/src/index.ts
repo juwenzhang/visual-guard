@@ -3,6 +3,28 @@ import {HOOK_NAMES} from '@visual-guard/core';
 import type {EnginePage, PerformanceMetrics} from '@visual-guard/shared';
 
 /**
+ * 性能预算指标名称常量（SSOT）
+ */
+export const PERF_BUDGET_KEYS = {
+  LCP: 'lcp',
+  FCP: 'fcp',
+  CLS: 'cls',
+  TTFB: 'ttfb'
+} as const;
+
+export type PerfBudgetKey = (typeof PERF_BUDGET_KEYS)[keyof typeof PERF_BUDGET_KEYS];
+
+/**
+ * 性能预算配置
+ */
+export interface PerfBudget {
+  lcp?: number;
+  fcp?: number;
+  cls?: number;
+  ttfb?: number;
+}
+
+/**
  * 采集 Navigation Timing 指标
  */
 async function collectNavigationTiming(page: EnginePage): Promise<{
@@ -167,7 +189,7 @@ export function createPerfPlugin(): VisualGuardPlugin {
           );
 
           // Budget 检查（如果配置了）
-          const budget = options['budget'] as Record<string, number> | undefined;
+          const budget = options['budget'] as PerfBudget | undefined;
           if (budget) {
             checkBudget(metrics, budget, log);
           }
@@ -185,34 +207,39 @@ export function createPerfPlugin(): VisualGuardPlugin {
  */
 function checkBudget(
   metrics: PerformanceMetrics,
-  budget: Record<string, number>,
+  budget: PerfBudget,
   log: {warn: (msg: string) => void}
 ): void {
+  const K = PERF_BUDGET_KEYS;
   const checks: Array<{label: string; value: number | undefined; budget: number}> = [];
 
-  if (budget['lcp'] && metrics.navigation.largestContentfulPaint !== undefined) {
+  if (budget.lcp && metrics.navigation.largestContentfulPaint !== undefined) {
     checks.push({
-      label: 'LCP',
+      label: K.LCP.toUpperCase(),
       value: metrics.navigation.largestContentfulPaint,
-      budget: budget['lcp']
+      budget: budget.lcp
     });
   }
-  if (budget['fcp'] && metrics.navigation.firstContentfulPaint !== undefined) {
+  if (budget.fcp && metrics.navigation.firstContentfulPaint !== undefined) {
     checks.push({
-      label: 'FCP',
+      label: K.FCP.toUpperCase(),
       value: metrics.navigation.firstContentfulPaint,
-      budget: budget['fcp']
+      budget: budget.fcp
     });
   }
-  if (budget['cls'] !== undefined && metrics.navigation.cumulativeLayoutShift !== undefined) {
+  if (budget.cls !== undefined && metrics.navigation.cumulativeLayoutShift !== undefined) {
     checks.push({
-      label: 'CLS',
+      label: K.CLS.toUpperCase(),
       value: metrics.navigation.cumulativeLayoutShift,
-      budget: budget['cls']
+      budget: budget.cls
     });
   }
-  if (budget['ttfb'] && metrics.navigation.timeToFirstByte !== undefined) {
-    checks.push({label: 'TTFB', value: metrics.navigation.timeToFirstByte, budget: budget['ttfb']});
+  if (budget.ttfb && metrics.navigation.timeToFirstByte !== undefined) {
+    checks.push({
+      label: K.TTFB.toUpperCase(),
+      value: metrics.navigation.timeToFirstByte,
+      budget: budget.ttfb
+    });
   }
 
   for (const check of checks) {

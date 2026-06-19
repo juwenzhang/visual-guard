@@ -37,7 +37,8 @@ export {
 } from './diff';
 // Plugin 系统
 export {PluginEventBus} from './plugin-event-bus';
-export {loadPlugins} from './plugin-loader';
+export type {PluginName} from './plugin-loader';
+export {loadPlugins, PLUGIN_NAMES} from './plugin-loader';
 export type {RunnerOptions} from './runner';
 // 核心运行器
 export {run} from './runner';
