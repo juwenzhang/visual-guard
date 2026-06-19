@@ -1,47 +1,45 @@
 # @visual-guard/engine-playwright
 
-> Playwright 浏览器引擎适配器，实现 Visual Guard 的 `BrowserEngineAdapter` 接口。
+Playwright 浏览器引擎适配器，当前 Visual Guard 推荐主线引擎。
 
 ## 安装
 
 ```bash
-npm install @visual-guard/engine-playwright playwright
-# 或
-pnpm add @visual-guard/engine-playwright playwright
+pnpm add -D @visual-guard/cli @visual-guard/engine-playwright
 ```
 
-## 用法
+## 使用
 
-```ts
-import { createPlaywrightAdapter } from '@visual-guard/engine-playwright';
-import { run } from '@visual-guard/core';
-
-const adapter = createPlaywrightAdapter();
-const manifest = await run({ config, adapter });
+```bash
+visual-guard run --engine playwright
 ```
 
-## API
+或在配置中：
 
-### `createPlaywrightAdapter()`
-
-创建 Playwright 引擎适配器实例，返回 `BrowserEngineAdapter`。
-
-```ts
-const adapter = createPlaywrightAdapter();
-// adapter.name → 'playwright'
-// adapter.capabilities → { fullPageScreenshot: true, ... }
-// adapter.launch({ headless: true }) → EngineRuntime
+```json
+{
+  "browser": {
+    "engine": "playwright",
+    "headless": true
+  }
+}
 ```
 
-实现的接口层级：
+## 能力
 
+- 全页截图 / 元素截图
+- DOM 快照
+- 网络 / 控制台事件采集
+- 多 context 隔离
+- Cookie / Header 注入
+- SSR 模式：禁用 serviceWorker、跳过网络监听、避免 streaming 页面关闭时的 Playwright tracker 问题
+
+## 浏览器安装
+
+若 Chromium 缺失，适配器会自动执行：
+
+```bash
+npx playwright install chromium
 ```
-BrowserEngineAdapter  →  chromium.launch()
-  └─ EngineRuntime    →  Browser
-       └─ EngineContext →  BrowserContext
-            └─ EnginePage →  Page
-```
 
-## License
-
-[MIT](./LICENSE) © luhanxin
+失败时可手动执行同一命令。

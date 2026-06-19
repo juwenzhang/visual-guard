@@ -1,15 +1,50 @@
+export {generateConsoleReport} from './console';
+export {generateHtmlReport} from './html';
+export {generateJsonReport} from './json';
+export type {ReporterOptions} from './types';
+
 /**
- * @visual-guard/reporters — Visual Guard reporters package
+ * 根据报告类型列表生成所有报告
  *
- * Replace the starter export below with the real API surface for this package.
- * Remember to update README.md with usage examples before publishing.
+ * @param options - 报告选项
+ * @param formats - 报告类型列表
+ * @returns 生成的文件路径列表和终端输出
  */
+export async function generateReports(
+  generate: {
+    console: (m: import('@visual-guard/shared').DiffManifest) => string;
+    json: (
+      m: import('@visual-guard/shared').DiffManifest,
+      outputDir: string,
+      runId: string
+    ) => Promise<string>;
+    html: (
+      m: import('@visual-guard/shared').DiffManifest,
+      outputDir: string,
+      runId: string
+    ) => Promise<string>;
+  },
+  manifest: import('@visual-guard/shared').DiffManifest,
+  outputDir: string,
+  runId: string,
+  formats: Array<'console' | 'json' | 'html' | 'pdf'>
+): Promise<{files: string[]; consoleOutput: string}> {
+  const files: string[] = [];
+  let consoleOutput = '';
 
-export const reportersVersion = '0.0.0';
+  for (const fmt of formats) {
+    if (fmt === 'console') {
+      consoleOutput = generate.console(manifest);
+    }
+    if (fmt === 'json') {
+      const filePath = await generate.json(manifest, outputDir, runId);
+      files.push(filePath);
+    }
+    if (fmt === 'html') {
+      const filePath = await generate.html(manifest, outputDir, runId);
+      files.push(filePath);
+    }
+  }
 
-/**
- * Example helper. Delete once you add your real implementation.
- */
-export function helloReporters(who = 'world'): string {
-  return `Hello, ${who}! (from @visual-guard/reporters)`;
+  return {files, consoleOutput};
 }

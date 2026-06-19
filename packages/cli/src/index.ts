@@ -1,15 +1,32 @@
 /**
- * @visual-guard/cli — Visual Guard cli package
- *
- * Replace the starter export below with the real API surface for this package.
- * Remember to update README.md with usage examples before publishing.
+ * @visual-guard/cli — Visual Guard 命令行入口
  */
 
-export const cliVersion = '0.0.0';
+import {readFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {Command} from 'commander';
+import {createBaselineCommand} from './commands/baseline';
+import {createCypressCommand} from './commands/cypress';
+import {createInitCommand} from './commands/init';
+import {createRunCommand} from './commands/run';
 
-/**
- * Example helper. Delete once you add your real implementation.
- */
-export function helloCli(who = 'world'): string {
-  return `Hello, ${who}! (from @visual-guard/cli)`;
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8')) as {
+  version: string;
+  description: string;
+};
+
+const program = new Command();
+
+program
+  .name('visual-guard')
+  .description(pkg.description)
+  .version(pkg.version)
+  .addCommand(createInitCommand())
+  .addCommand(createRunCommand())
+  .addCommand(createBaselineCommand())
+  .addCommand(createCypressCommand());
+
+export function main(argv: string[] = process.argv): void {
+  program.parse(argv);
 }

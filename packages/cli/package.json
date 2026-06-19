@@ -16,6 +16,9 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "visual-guard": "./bin/visual-guard.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -24,6 +27,7 @@
   },
   "files": [
     "dist",
+    "bin",
     "README.md",
     "README.zh-CN.md",
     "LICENSE",
@@ -39,6 +43,9 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@visual-guard/engine-cypress": "workspace:*",
+    "@visual-guard/engine-playwright": "workspace:*",
+    "@visual-guard/engine-puppeteer": "workspace:*",
     "tsup": "^8.3.0",
     "typescript": "^5.4.0"
   },
@@ -46,6 +53,7 @@
     "node": ">=18.18.0"
   },
   "dependencies": {
+    "@inquirer/prompts": "^7.4.0",
     "@visual-guard/config": "workspace:*",
     "@visual-guard/core": "workspace:*",
     "@visual-guard/reporters": "workspace:*",
@@ -53,5 +61,21 @@
     "chalk": "^5.4.0",
     "commander": "^12.1.0",
     "ora": "^8.2.0"
+  },
+  "peerDependencies": {
+    "@visual-guard/engine-cypress": "workspace:*",
+    "@visual-guard/engine-playwright": "workspace:*",
+    "@visual-guard/engine-puppeteer": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@visual-guard/engine-cypress": {
+      "optional": true
+    },
+    "@visual-guard/engine-playwright": {
+      "optional": true
+    },
+    "@visual-guard/engine-puppeteer": {
+      "optional": true
+    }
   }
 }

@@ -63,6 +63,7 @@ export async function loadConfig(
       'visualguard.config.js',
       'visualguard.config.cjs',
       'visualguard.config.mjs',
+      'visualguard.config.json',
       'package.json'
     ]
   });

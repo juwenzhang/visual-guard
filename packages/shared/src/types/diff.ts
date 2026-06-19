@@ -1,7 +1,7 @@
 /**
  * 场景状态
  */
-export type ScenarioStatus = 'passed' | 'changed' | 'failed' | 'errored';
+export type ScenarioStatus = 'passed' | 'changed' | 'failed' | 'errored' | 'baseline';
 
 /**
  * 运行时错误
@@ -171,6 +171,8 @@ export interface Summary {
   failed: number;
   changed: number;
   errored: number;
+  /** 首次运行、仅建立基线的场景数 */
+  baseline: number;
   pixelDiffCount: number;
   domDiffCount: number;
   layoutDiffCount: number;

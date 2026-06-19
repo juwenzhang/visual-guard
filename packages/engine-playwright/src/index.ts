@@ -5,19 +5,18 @@
  * SSR 模式通过禁用 serviceWorker + 跳过事件监听，避免流式响应导致的 stream 错误。
  */
 
+import {execSync} from 'node:child_process';
 import type {
   BrowserEngineAdapter,
-  ConsoleHandler,
   CookieInput,
   EngineCapabilities,
   EngineContext,
   EngineContextOptions,
   EngineLaunchOptions,
   EnginePage,
-  EngineRuntime,
-  RequestHandler,
-  ResponseHandler
+  EngineRuntime
 } from '@visual-guard/shared';
+import {logger} from '@visual-guard/shared';
 import {
   type Browser,
   type BrowserContext,
@@ -45,12 +44,39 @@ export function createPlaywrightAdapter(): BrowserEngineAdapter {
     name: 'playwright',
     capabilities,
     async launch(options: EngineLaunchOptions): Promise<EngineRuntime> {
-      const browser = await chromium.launch({
-        headless: options.headless ?? true,
-        args: options.args,
-        executablePath: options.executablePath
-      });
-      return createRuntime(browser);
+      try {
+        const browser = await chromium.launch({
+          headless: options.headless ?? true,
+          args: options.args,
+          executablePath: options.executablePath
+        });
+        return createRuntime(browser);
+      } catch (error) {
+        if (
+          !options.executablePath &&
+          error instanceof Error &&
+          (error.message.includes("Executable doesn't exist") ||
+            error.message.includes('BrowserType.launch'))
+        ) {
+          try {
+            logger.info('Playwright 正在自动安装 Chromium 浏览器（首次约 150MB，仅需一次）...');
+            execSync('npx playwright install chromium', {
+              stdio: 'inherit',
+              timeout: 120_000
+            });
+            const browser = await chromium.launch({
+              headless: options.headless ?? true,
+              args: options.args
+            });
+            return createRuntime(browser);
+          } catch {
+            logger.error('Chromium 安装失败，请手动尝试:');
+            logger.error('  npx playwright install chromium');
+            throw new Error('CHROMIUM_INSTALL_FAILED');
+          }
+        }
+        throw error;
+      }
     }
   };
 }

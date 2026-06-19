@@ -1,3 +1,4 @@
+// biome-ignore-all lint/complexity/useLiteralKeys: launchOpts 是 Record 类型，TS 要求方括号访问
 import type {
   BaselineBundle,
   BrowserEngineAdapter,
@@ -23,6 +24,12 @@ export interface RunnerOptions {
   adapter: BrowserEngineAdapter;
   /** 并发数，默认使用配置中的 concurrency */
   concurrency?: number;
+  /**
+   * 是否更新基线。
+   * - 首次运行（无现有基线）：忽略此参数，强制写入
+   * - 后续运行：仅在 `writeBaseline: true` 时覆盖旧基线
+   */
+  writeBaseline?: boolean;
 }
 
 /**
@@ -53,10 +60,20 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
 
   // 启动引擎
   logger.info(`启动浏览器引擎: ${adapter.name}`);
+  const launchOpts = config.browser?.launchOptions as Record<string, unknown> | undefined;
+  const userArgs = Array.isArray(launchOpts?.['args']) ? (launchOpts['args'] as string[]) : [];
+
   const runtime = await adapter.launch({
     headless: config.browser?.headless ?? true,
     timeout: config.timeout,
-    args: adapter.name === 'playwright' ? ['--no-sandbox'] : undefined
+    args:
+      adapter.name === 'playwright'
+        ? [...new Set(['--no-sandbox', ...userArgs])] // 去重，--no-sandbox 保证不被覆盖
+        : userArgs.length > 0
+          ? userArgs
+          : undefined,
+    executablePath:
+      typeof launchOpts?.['executablePath'] === 'string' ? launchOpts['executablePath'] : undefined
   });
 
   try {
@@ -106,64 +123,86 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
           };
           const baseline = await store.read(key);
 
-          // 对比
+          // 无基线：首次运行，仅建立基线，跳过对比
+          const isFirstRun = !baseline;
+          const shouldWrite = isFirstRun || (options.writeBaseline ?? false);
+
+          // 写基线：首次运行强制写入，后续需 --write-baseline
+          if (shouldWrite) {
+            const newBundle: BaselineBundle = {
+              meta: {
+                key,
+                createdAt: baseline?.meta.createdAt ?? new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                version: (baseline?.meta.version ?? 0) + 1,
+                runId,
+                size: {
+                  dom: JSON.stringify(captureResult.snapshot.dom).length,
+                  screenshots: (captureResult.snapshot.screenshots.fullPage ?? '').length,
+                  network: captureResult.snapshot.network.length,
+                  performance: captureResult.snapshot.performance ? 1 : 0
+                }
+              },
+              dom: captureResult.snapshot.dom as unknown as Record<string, unknown>,
+              screenshots: {
+                fullPage: captureResult.snapshot.screenshots.fullPage
+                  ? Buffer.from(captureResult.snapshot.screenshots.fullPage, 'base64')
+                  : undefined,
+                elements: Object.fromEntries(
+                  Object.entries(captureResult.snapshot.screenshots.elements ?? {}).map(
+                    ([k, v]) => [k, Buffer.from(v, 'base64')]
+                  )
+                )
+              },
+              network: captureResult.snapshot.network as unknown as Array<Record<string, unknown>>,
+              performance: captureResult.snapshot.performance as unknown as
+                | Record<string, unknown>
+                | undefined
+            };
+            await store.write(key, newBundle);
+          }
+
+          if (isFirstRun) {
+            // 首次运行：仅建立基线
+            const result: ScenarioResult = {
+              id: scene.id,
+              name: scene.scene.name,
+              url: scene.url,
+              status: 'baseline',
+              durationMs: captureResult.durationMs,
+              artifacts: {
+                currentScreenshot: captureResult.snapshot.screenshots.fullPage
+              },
+              diffs: {},
+              errors: []
+            };
+            return result;
+          }
+
+          // 有基线：执行对比
           const pixelResult = await diffPixel(
             captureResult.snapshot.screenshots.fullPage,
-            baseline?.screenshots.fullPage,
+            baseline.screenshots.fullPage,
             config.diff ?? {}
           );
 
-          const domResult = await diffDom(captureResult.snapshot.dom, baseline?.dom);
+          const domResult = await diffDom(captureResult.snapshot.dom, baseline.dom);
 
           const layoutResult = await diffLayout(
             captureResult.snapshot.dom,
-            baseline?.dom,
+            baseline.dom,
             config.diff ?? {}
           );
 
           const networkResult = await diffNetwork(
             captureResult.snapshot.network,
-            (baseline?.network ?? []) as unknown as typeof captureResult.snapshot.network
+            (baseline.network ?? []) as unknown as typeof captureResult.snapshot.network
           );
 
           const performanceResult = await diffPerformance(
             captureResult.snapshot.performance,
-            baseline?.performance
+            baseline.performance
           );
-
-          // 写基线
-          const newBundle: BaselineBundle = {
-            meta: {
-              key,
-              createdAt: baseline?.meta.createdAt ?? new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              version: (baseline?.meta.version ?? 0) + 1,
-              runId,
-              size: {
-                dom: JSON.stringify(captureResult.snapshot.dom).length,
-                screenshots: (captureResult.snapshot.screenshots.fullPage ?? '').length,
-                network: captureResult.snapshot.network.length,
-                performance: captureResult.snapshot.performance ? 1 : 0
-              }
-            },
-            dom: captureResult.snapshot.dom as unknown as Record<string, unknown>,
-            screenshots: {
-              fullPage: captureResult.snapshot.screenshots.fullPage
-                ? Buffer.from(captureResult.snapshot.screenshots.fullPage, 'base64')
-                : undefined,
-              elements: Object.fromEntries(
-                Object.entries(captureResult.snapshot.screenshots.elements ?? {}).map(([k, v]) => [
-                  k,
-                  Buffer.from(v, 'base64')
-                ])
-              )
-            },
-            network: captureResult.snapshot.network as unknown as Array<Record<string, unknown>>,
-            performance: captureResult.snapshot.performance as unknown as
-              | Record<string, unknown>
-              | undefined
-          };
-          await store.write(key, newBundle);
 
           // 判断状态
           const hasDiffs =
@@ -230,6 +269,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
       failed: scenarioResults.filter(r => r.status === 'failed').length,
       changed: scenarioResults.filter(r => r.status === 'changed').length,
       errored: scenarioResults.filter(r => r.status === 'errored').length,
+      baseline: scenarioResults.filter(r => r.status === 'baseline').length,
       pixelDiffCount: scenarioResults.filter(
         r => r.diffs.pixel && (r.diffs.pixel.diffPixels ?? 0) > 0
       ).length,
@@ -261,7 +301,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
     };
 
     logger.info(
-      `执行完成: ${summary.passed} 通过, ${summary.changed} 有变化, ${summary.failed} 失败, ${summary.errored} 错误`
+      `执行完成: ${summary.baseline > 0 ? `${summary.baseline} 基线建立, ` : ''}${summary.passed} 通过, ${summary.changed} 有变化, ${summary.failed} 失败, ${summary.errored} 错误`
     );
 
     return manifest;
