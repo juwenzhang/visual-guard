@@ -51,5 +51,18 @@
       "waitForTimeout": 2000
     }
   ],
-  "reporters": ["console", "json", "html"]
+  "reporters": ["console", "json", "html"],
+  "plugins": [
+    {
+      "name": "perf",
+      "options": {
+        "budget": {
+          "lcp": 2500,
+          "fcp": 1800,
+          "cls": 0.1,
+          "ttfb": 800
+        }
+      }
+    }
+  ]
 }

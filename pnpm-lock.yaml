@@ -78,6 +78,9 @@ importers:
       '@visual-guard/engine-puppeteer':
         specifier: workspace:*
         version: link:../../packages/engine-puppeteer
+      '@visual-guard/plugin-perf':
+        specifier: workspace:*
+        version: link:../../packages/plugin-perf
       cypress:
         specifier: ^13.0.0
         version: 13.17.0
@@ -303,6 +306,9 @@ importers:
 
   packages/plugin-perf:
     dependencies:
+      '@visual-guard/core':
+        specifier: workspace:*
+        version: link:../core
       '@visual-guard/shared':
         specifier: workspace:*
         version: link:../shared

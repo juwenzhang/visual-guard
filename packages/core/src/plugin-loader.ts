@@ -1,3 +1,5 @@
+import {createRequire} from 'node:module';
+import {join} from 'node:path';
 import type {PluginConfig, VisualGuardConfig} from '@visual-guard/shared';
 import {logger} from '@visual-guard/shared';
 import {PluginEventBus} from './plugin-event-bus';
@@ -9,6 +11,15 @@ const PLUGIN_PACKAGE_MAP: Record<string, string> = {
   notify: '@visual-guard/plugin-notify',
   archive: '@visual-guard/plugin-archive'
 };
+
+/**
+ * 从使用方工程路径解析 plugin 包，而非从 core 包的 node_modules。
+ * pnpm workspace 中 core 不一定依赖 plugin 包，所以动态 import 必须以使用方 CWD 为基准。
+ */
+function resolvePluginPath(pkgName: string): string {
+  const requireFromProject = createRequire(join(process.cwd(), 'package.json'));
+  return requireFromProject.resolve(pkgName);
+}
 
 /**
  * 加载并初始化所有配置的 plugin。
@@ -28,10 +39,15 @@ export async function loadPlugins(
     }
 
     try {
-      const mod = await import(pkgName);
+      const resolvedPath = resolvePluginPath(pkgName);
+      const mod = await import(resolvedPath);
+      const raw = (mod as {default?: unknown}).default ?? mod;
+
+      // plugin 可以是工厂函数（返回 VisualGuardPlugin）或直接是 VisualGuardPlugin 实例
       const plugin: VisualGuardPlugin =
-        (mod as {default?: VisualGuardPlugin} & VisualGuardPlugin).default ??
-        (mod as VisualGuardPlugin);
+        typeof raw === 'function'
+          ? await (raw as () => VisualGuardPlugin)()
+          : (raw as VisualGuardPlugin);
 
       // 构造 PluginAPI
       const api: PluginAPI = {

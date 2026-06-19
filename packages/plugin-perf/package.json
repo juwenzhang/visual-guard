@@ -46,14 +46,7 @@
     "node": ">=18.18.0"
   },
   "dependencies": {
+    "@visual-guard/core": "workspace:*",
     "@visual-guard/shared": "workspace:*"
-  },
-  "peerDependencies": {
-    "lighthouse": "^12.0.0"
-  },
-  "peerDependenciesMeta": {
-    "lighthouse": {
-      "optional": true
-    }
   }
 }

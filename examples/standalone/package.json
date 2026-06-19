@@ -16,6 +16,7 @@
     "@visual-guard/engine-cypress": "workspace:*",
     "@visual-guard/engine-playwright": "workspace:*",
     "@visual-guard/engine-puppeteer": "workspace:*",
+    "@visual-guard/plugin-perf": "workspace:*",
     "cypress": "^13.0.0",
     "playwright": "^1.48.0",
     "puppeteer-core": "^24.31.0"

@@ -166,9 +166,13 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             HOOK_NAMES.AfterCapture,
             baseCtx(config, runId, {
               scenario: scenarioInfo,
-              snapshot: captureResult.snapshot
+              snapshot: captureResult.snapshot,
+              enginePage: captureResult.page
             })
           );
+
+          // 插件 hook 执行完毕后关闭页面
+          await captureResult.page.close();
 
           // 读取基线
           const key = {
