@@ -317,6 +317,16 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             (layoutResult?.changeCount ?? 0) > 0;
           const status = hasDiffs ? 'changed' : 'passed';
 
+          // 基线截图（可能为 Buffer 或 JSON 反序列化的 {data: [...]} 对象）
+          let baselineScreenshot: string | undefined;
+          if (baseline.screenshots.fullPage) {
+            const raw = baseline.screenshots.fullPage;
+            const buf = Buffer.isBuffer(raw)
+              ? raw
+              : Buffer.from((raw as {data?: number[]}).data ?? []);
+            baselineScreenshot = buf.toString('base64');
+          }
+
           const result: ScenarioResult = {
             id: scene.id,
             name: scene.scene.name,
@@ -324,6 +334,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             status,
             durationMs: captureResult.durationMs,
             artifacts: {
+              baselineScreenshot,
               currentScreenshot: captureResult.snapshot.screenshots.fullPage,
               diffScreenshot: pixelResult?.diffImage
             },
