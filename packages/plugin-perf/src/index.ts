@@ -146,6 +146,8 @@ async function collectCLS(page: EnginePage): Promise<number | undefined> {
  * 创建 perf plugin
  */
 export function createPerfPlugin(): VisualGuardPlugin {
+  let budgetWarnings: string[] = [];
+
   return {
     name: 'perf',
 
@@ -153,6 +155,7 @@ export function createPerfPlugin(): VisualGuardPlugin {
       const options = api.getConfig();
       const log = api.getLogger();
 
+      // afterCapture: 静默采集性能数据，填充到 snapshot
       api.on(HOOK_NAMES.AfterCapture, async ctx => {
         const page = ctx.enginePage;
         if (!page) return;
@@ -176,27 +179,42 @@ export function createPerfPlugin(): VisualGuardPlugin {
             resources: []
           };
 
-          // 填充 snapshot.performance，供 diffPerformance() 使用
+          // 填充 snapshot.performance，供 diffPerformance() 和 report 使用
           if (ctx.snapshot) {
             ctx.snapshot.performance = metrics;
           }
 
-          const scenarioName = ctx.scenario?.name ?? 'unknown';
-          const lcpStr = lcp ? `${Math.round(lcp)}ms` : 'N/A';
-          const clsStr = cls !== undefined ? cls.toFixed(3) : 'N/A';
-          log.warn(
-            `[perf] ${scenarioName}: LCP=${lcpStr}, CLS=${clsStr}, FCP=${nav.fcp ?? 'N/A'}ms, TTFB=${nav.ttfb}ms`
-          );
-
-          // Budget 检查（如果配置了）
+          // Budget 检查
           const budget = options['budget'] as PerfBudget | undefined;
           if (budget) {
-            checkBudget(metrics, budget, log);
+            const warnings = checkBudget(metrics, budget);
+            budgetWarnings.push(...warnings);
           }
         } catch (_error: unknown) {
           const error = _error as Error;
-          log.warn(`[perf] 性能采集失败: ${error?.message ?? String(_error)}`);
+          budgetWarnings.push(
+            `性能采集失败 (${ctx.scenario?.name ?? 'unknown'}): ${error?.message ?? String(_error)}`
+          );
         }
+      });
+
+      // afterReport: 输出一次性摘要
+      api.on(HOOK_NAMES.AfterReport, async ctx => {
+        if (!ctx.manifest) return;
+
+        const totalScenes = ctx.manifest.summary.total;
+        const regressed = ctx.manifest.summary.performanceRegressionCount;
+
+        if (regressed > 0) {
+          log.warn(`[perf] ${regressed}/${totalScenes} 个场景存在性能退化`);
+        } else if (totalScenes > 0) {
+          log.info(`[perf] 全部 ${totalScenes} 个场景性能指标已采集`);
+        }
+
+        for (const warning of budgetWarnings) {
+          log.warn(warning);
+        }
+        budgetWarnings = [];
       });
     }
   };
@@ -205,13 +223,10 @@ export function createPerfPlugin(): VisualGuardPlugin {
 /**
  * 检查性能指标是否超预算
  */
-function checkBudget(
-  metrics: PerformanceMetrics,
-  budget: PerfBudget,
-  log: {warn: (msg: string) => void}
-): void {
+function checkBudget(metrics: PerformanceMetrics, budget: PerfBudget): string[] {
   const K = PERF_BUDGET_KEYS;
-  const checks: Array<{label: string; value: number | undefined; budget: number}> = [];
+  const warnings: string[] = [];
+  const checks: Array<{label: string; value: number; budget: number}> = [];
 
   if (budget.lcp && metrics.navigation.largestContentfulPaint !== undefined) {
     checks.push({
@@ -243,10 +258,12 @@ function checkBudget(
   }
 
   for (const check of checks) {
-    if (check.value !== undefined && check.value > check.budget) {
-      log.warn(`[perf] ${check.label} 超出预算: ${check.value} > ${check.budget}`);
+    if (check.value > check.budget) {
+      warnings.push(`[perf] ${check.label} 超出预算: ${check.value} > ${check.budget}`);
     }
   }
+
+  return warnings;
 }
 
 export default createPerfPlugin;

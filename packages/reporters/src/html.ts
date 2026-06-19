@@ -43,6 +43,7 @@ function _buildHtml(manifest: DiffManifest): string {
       const domChanges = s.diffs.dom
         ? `+${s.diffs.dom.added.length} / -${s.diffs.dom.removed.length} / ~${s.diffs.dom.changed.length}`
         : '—';
+      const perfInfo = s.diffs.performance ? _formatPerfCell(s.diffs.performance) : '—';
 
       return `
       <tr>
@@ -52,9 +53,18 @@ function _buildHtml(manifest: DiffManifest): string {
         <td>${s.durationMs}ms</td>
         <td>${pixelInfo}</td>
         <td>${domChanges}</td>
+        <td>${perfInfo}</td>
       </tr>`;
     })
     .join('');
+
+  const perfSummary =
+    summary.performanceRegressionCount > 0
+      ? `<div class="summary-card">
+        <div class="num changed">${summary.performanceRegressionCount}</div>
+        <div class="label">性能退化</div>
+      </div>`
+      : '';
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -131,6 +141,7 @@ function _buildHtml(manifest: DiffManifest): string {
         <div class="num errored">${summary.errored}</div>
         <div class="label">错误</div>
       </div>
+      ${perfSummary}
     </div>
 
     <div class="progress-bar">
@@ -147,6 +158,7 @@ function _buildHtml(manifest: DiffManifest): string {
             <th>耗时</th>
             <th>像素差异</th>
             <th>DOM 变化</th>
+            <th>性能</th>
           </tr>
         </thead>
         <tbody>
@@ -185,4 +197,34 @@ function _escapeHtml(str: string): string {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
+}
+
+function _formatPerfCell(perf: {
+  regressions?: Array<{metric: string; current: number; changeRatio: number}>;
+  improvements?: Array<{metric: string; current: number; changeRatio?: number}>;
+}): string {
+  if (perf.regressions && perf.regressions.length > 0) {
+    return perf.regressions
+      .map(r => `<span style="color:#ef4444">${r.metric} ↑ ${_fmtMs(r.current)}</span>`)
+      .join('<br>');
+  }
+
+  const first = perf.improvements?.[0];
+  if (first && first.changeRatio !== undefined && first.changeRatio !== 0) {
+    return (perf.improvements ?? [])
+      .map(r => `<span style="color:#22c55e">${r.metric} ↓ ${_fmtMs(r.current)}</span>`)
+      .join('<br>');
+  }
+
+  // Baseline 模式：仅显示当前值
+  if (perf.improvements && perf.improvements.length > 0) {
+    return perf.improvements.map(r => `${r.metric}=${_fmtMs(r.current)}`).join('<br>');
+  }
+
+  return '—';
+}
+
+function _fmtMs(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}s`;
+  return `${Math.round(value)}ms`;
 }

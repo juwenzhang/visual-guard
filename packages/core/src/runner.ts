@@ -53,6 +53,41 @@ function baseCtx(
   };
 }
 
+/** 基线模式下的性能占位 diff（无对比基线，仅标记当前值供报告展示） */
+function _baselinePerformanceDiffs(captureResult: {
+  snapshot: {performance?: {navigation: Record<string, number | undefined>}};
+}) {
+  const perf = captureResult.snapshot.performance;
+  if (!perf) return {};
+
+  const metrics = [
+    {key: 'LCP', value: perf.navigation['largestContentfulPaint']},
+    {key: 'FCP', value: perf.navigation['firstContentfulPaint']},
+    {key: 'CLS', value: perf.navigation['cumulativeLayoutShift']},
+    {key: 'TTFB', value: perf.navigation['timeToFirstByte']}
+  ].filter(m => m.value !== undefined);
+
+  return {
+    performance: {
+      regressions: [] as Array<{
+        metric: string;
+        baseline: number;
+        current: number;
+        change: number;
+        changeRatio: number;
+      }>,
+      improvements: metrics.map(m => ({
+        metric: m.key,
+        baseline: m.value as number,
+        current: m.value as number,
+        change: 0,
+        changeRatio: 0
+      })),
+      summary: {totalMetrics: metrics.length, regressed: 0, improved: 0, unchanged: metrics.length}
+    }
+  };
+}
+
 /**
  * 运行 Visual Guard 完整流水线
  *
@@ -236,7 +271,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
               artifacts: {
                 currentScreenshot: captureResult.snapshot.screenshots.fullPage
               },
-              diffs: {},
+              diffs: _baselinePerformanceDiffs(captureResult),
               errors: []
             };
             return result;
