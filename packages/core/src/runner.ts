@@ -12,7 +12,10 @@ import {hash, logger} from '@visual-guard/shared';
 import {createLocalBaselineStore} from './baseline-store';
 import {captureScene} from './capture';
 import {diffDom, diffLayout, diffNetwork, diffPerformance, diffPixel} from './diff';
+import type {PluginEventBus} from './plugin-event-bus';
+import {loadPlugins} from './plugin-loader';
 import {resolveScenes} from './scene-resolver';
+import type {HookContext} from './types';
 
 /**
  * 运行器选项
@@ -30,6 +33,24 @@ export interface RunnerOptions {
    * - 后续运行：仅在 `writeBaseline: true` 时覆盖旧基线
    */
   writeBaseline?: boolean;
+  /** plugin 事件总线（可选） */
+  eventBus?: PluginEventBus;
+}
+
+/** 构造基础 HookContext */
+function baseCtx(
+  config: VisualGuardConfig,
+  runId: string,
+  overrides?: Partial<HookContext>
+): HookContext {
+  return {
+    runId,
+    project: config.project,
+    env: config.env,
+    branch: 'main',
+    config,
+    ...overrides
+  };
 }
 
 /**
@@ -48,11 +69,22 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
   const {config, adapter, concurrency} = options;
   const startTime = new Date();
   const runId = `${Date.now()}-${hash(config.project).slice(0, 8)}`;
+
+  // 加载 plugin（如果配置了 plugins 且未外部传入 eventBus）
+  let eventBus = options.eventBus;
+  let pluginTeardown: (() => void) | undefined;
+  if (!eventBus && config.plugins && config.plugins.length > 0) {
+    const result = await loadPlugins(config.plugins, config);
+    eventBus = result.bus;
+    pluginTeardown = result.teardown;
+  }
   const baselineDir = config.baselineDir ?? '.visual-guard/baselines';
   const store = createLocalBaselineStore(baselineDir);
 
   logger.info(`启动 Visual Guard — 项目: ${config.project}, 环境: ${config.env}`);
   logger.info(`运行 ID: ${runId}`);
+
+  await eventBus?.emit('beforeRun', baseCtx(config, runId));
 
   // 解析场景
   const scenes = resolveScenes(config);
@@ -107,9 +139,36 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
         try {
           // 采集
           logger.info(`采集场景: ${scene.id} (${scene.viewport.name})`);
+
+          const scenarioInfo = {
+            id: scene.id,
+            name: scene.scene.name,
+            url: scene.url,
+            viewport: {
+              width: scene.viewport.width,
+              height: scene.viewport.height,
+              deviceScaleFactor: scene.viewport.deviceScaleFactor ?? 1
+            }
+          };
+
+          await eventBus?.emit(
+            'beforeCapture',
+            baseCtx(config, runId, {
+              scenario: scenarioInfo
+            })
+          );
+
           const captureResult = await captureScene(scene, context, {
             timeout: config.timeout ?? 30000
           });
+
+          await eventBus?.emit(
+            'afterCapture',
+            baseCtx(config, runId, {
+              scenario: scenarioInfo,
+              snapshot: captureResult.snapshot
+            })
+          );
 
           // 读取基线
           const key = {
@@ -180,6 +239,14 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
           }
 
           // 有基线：执行对比
+          await eventBus?.emit(
+            'beforeCompare',
+            baseCtx(config, runId, {
+              scenario: scenarioInfo,
+              snapshot: captureResult.snapshot
+            })
+          );
+
           const pixelResult = await diffPixel(
             captureResult.snapshot.screenshots.fullPage,
             baseline.screenshots.fullPage,
@@ -230,6 +297,15 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             },
             errors: []
           };
+
+          await eventBus?.emit(
+            'afterCompare',
+            baseCtx(config, runId, {
+              scenario: scenarioInfo,
+              snapshot: captureResult.snapshot,
+              scenarioResult: result
+            })
+          );
 
           return result;
         } catch (error) {
@@ -304,8 +380,12 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
       `执行完成: ${summary.baseline > 0 ? `${summary.baseline} 基线建立, ` : ''}${summary.passed} 通过, ${summary.changed} 有变化, ${summary.failed} 失败, ${summary.errored} 错误`
     );
 
+    await eventBus?.emit('afterReport', baseCtx(config, runId, {manifest}));
+
     return manifest;
   } finally {
+    await eventBus?.emit('afterRun', baseCtx(config, runId));
+    pluginTeardown?.();
     await runtime.close();
   }
 }

@@ -207,6 +207,7 @@ const capabilities: EngineCapabilities = {
   consoleListening: true,
   multiContext: true,
   lighthouse: false,
+  cdpAccess: true,
   cookies: true,
   extraHTTPHeaders: true
 };
@@ -392,6 +393,21 @@ function createPage(page: Page, isSsr: boolean): EnginePage {
           : undefined
       });
       return Buffer.from(buf);
+    },
+
+    async getCDPSession() {
+      const cdp = await page.createCDPSession();
+      return {
+        async send<T>(method: string, params?: Record<string, unknown>): Promise<T> {
+          return cdp.send(method, params) as Promise<T>;
+        },
+        on(event: string, handler: (params: unknown) => void): void {
+          cdp.on(event, handler);
+        },
+        async detach() {
+          await cdp.detach();
+        }
+      };
     },
 
     async elementScreenshot(selector, options) {

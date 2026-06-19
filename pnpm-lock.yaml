@@ -170,6 +170,9 @@ importers:
       fs-extra:
         specifier: ^11.3.0
         version: 11.3.5
+      mitt:
+        specifier: ^3.0.1
+        version: 3.0.1
       p-limit:
         specifier: ^6.2.0
         version: 6.2.0

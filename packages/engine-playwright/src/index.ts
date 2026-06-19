@@ -35,6 +35,7 @@ const capabilities: EngineCapabilities = {
   consoleListening: true,
   multiContext: true,
   lighthouse: false,
+  cdpAccess: true,
   cookies: true,
   extraHTTPHeaders: true
 };
@@ -175,6 +176,25 @@ function createPage(page: Page, isSsr: boolean): EnginePage {
         quality: options?.quality,
         animations: options?.animations
       });
+    },
+
+    async getCDPSession() {
+      const cdp = await page.context().newCDPSession(page);
+      // Playwright CDPSession 的 send/on 类型过于严格（literal 方法名），
+      // 这里用 any 转换适配我们自己的 CDPSession 抽象。
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = cdp as any;
+      return {
+        async send<T>(method: string, params?: Record<string, unknown>): Promise<T> {
+          return raw.send(method, params) as Promise<T>;
+        },
+        on(event: string, handler: (params: unknown) => void): void {
+          raw.on(event, handler);
+        },
+        async detach() {
+          await cdp.detach();
+        }
+      };
     },
 
     // SSR 模式跳过事件监听注册，避免 Playwright 追踪流式响应
