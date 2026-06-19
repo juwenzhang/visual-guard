@@ -30,6 +30,7 @@ export type {
   PerformanceBudget,
   PerformanceConfig,
   PluginConfig,
+  RenderMode,
   ReporterType,
   SceneConfig,
   ViewportConfig,

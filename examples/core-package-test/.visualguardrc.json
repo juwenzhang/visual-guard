@@ -1,0 +1,23 @@
+{
+  "project": "my-app",
+  "renderMode": "ssr",
+  "baseUrl": "https://rag-chat-cli.vercel.app",
+  "baselineUrls": [
+    "https://rag-chat-cli-git-vercel-install-and-efa600-juwenzhangs-projects.vercel.app/",
+    "https://rag-chat-cli-git-vercel-install-ver-6f5199-juwenzhangs-projects.vercel.app/"
+  ],
+  "scenarios": [
+    {
+      "id": "home-page",
+      "name": "首页",
+      "path": "/login",
+      "waitForNetworkIdle": true
+    }
+  ],
+  "viewport": [
+    { "name": "desktop", "width": 1280, "height": 800 },
+    { "name": "mobile", "width": 375, "height": 812, "deviceScaleFactor": 2, "isMobile": true }
+  ],
+  "concurrency": 2,
+  "timeout": 15000
+}

@@ -320,13 +320,11 @@ CI 约定：
 
 ## 建议下一步
 
-共享层类型定义已完成，建议继续完成其他基础包：
+`@visual-guard/core` 已完成，建议继续：
 
-1. **`@visual-guard/config` 包**：实现配置加载、默认值合并、环境变量覆盖和校验
-2. **`@visual-guard/core` 包**：实现核心执行流程（场景解析、采集、对比、报告）
-3. **`@visual-guard/engine-playwright` 包**：实现 Playwright 引擎适配器
-4. **`@visual-guard/cli` 包**：实现命令行入口
-5. **`@visual-guard/reporters` 包**：实现报告输出
+1. **`@visual-guard/engine-playwright` 包**：实现 Playwright 引擎适配器（实现 BrowserEngineAdapter 接口）
+2. **`@visual-guard/cli` 包**：实现命令行入口
+3. **`@visual-guard/reporters` 包**：实现报告输出
 
 ## 命令执行约定
 

@@ -1,26 +1,46 @@
 # @visual-guard/engine-playwright
 
-> Visual Guard engine-playwright package
+> Playwright 浏览器引擎适配器，实现 Visual Guard 的 `BrowserEngineAdapter` 接口。
 
-## Install
+## 安装
 
 ```bash
-npm install @visual-guard/engine-playwright
-# or
-pnpm add @visual-guard/engine-playwright
+npm install @visual-guard/engine-playwright playwright
+# 或
+pnpm add @visual-guard/engine-playwright playwright
 ```
 
-## Usage
+## 用法
 
 ```ts
-import {helloEnginePlaywright} from '@visual-guard/engine-playwright';
+import { createPlaywrightAdapter } from '@visual-guard/engine-playwright';
+import { run } from '@visual-guard/core';
 
-console.log(helloEnginePlaywright('reader'));
+const adapter = createPlaywrightAdapter();
+const manifest = await run({ config, adapter });
 ```
 
-## Docs
+## API
 
-See the full visual-guard documentation: <https://juwenzhang.github.io/visual-guard/>
+### `createPlaywrightAdapter()`
+
+创建 Playwright 引擎适配器实例，返回 `BrowserEngineAdapter`。
+
+```ts
+const adapter = createPlaywrightAdapter();
+// adapter.name → 'playwright'
+// adapter.capabilities → { fullPageScreenshot: true, ... }
+// adapter.launch({ headless: true }) → EngineRuntime
+```
+
+实现的接口层级：
+
+```
+BrowserEngineAdapter  →  chromium.launch()
+  └─ EngineRuntime    →  Browser
+       └─ EngineContext →  BrowserContext
+            └─ EnginePage →  Page
+```
 
 ## License
 

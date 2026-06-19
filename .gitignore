@@ -25,3 +25,5 @@ public/mockServiceWorker.js
 **/dist
 .env
 .codebuddy
+
+.visual-guard/

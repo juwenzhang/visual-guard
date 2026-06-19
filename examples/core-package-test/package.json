@@ -1,0 +1,42 @@
+{
+  "name": "app",
+  "version": "0.0.0",
+  "private": false,
+  "description": ".",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "start": "pnpm run build && node dist/index.mjs"
+  },
+  "dependencies": {
+    "@visual-guard/config": "workspace:*",
+    "@visual-guard/core": "workspace:*",
+    "@visual-guard/engine-playwright": "workspace:*",
+    "@visual-guard/shared": "workspace:*",
+    "playwright": "^1.61.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.4.0"
+  }
+}

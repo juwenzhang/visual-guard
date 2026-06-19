@@ -1,0 +1,271 @@
+import type {
+  BaselineBundle,
+  BrowserEngineAdapter,
+  DiffManifest,
+  EngineContext,
+  ScenarioResult,
+  Summary,
+  VisualGuardConfig
+} from '@visual-guard/shared';
+import {hash, logger} from '@visual-guard/shared';
+import {createLocalBaselineStore} from './baseline-store';
+import {captureScene} from './capture';
+import {diffDom, diffLayout, diffNetwork, diffPerformance, diffPixel} from './diff';
+import {resolveScenes} from './scene-resolver';
+
+/**
+ * 运行器选项
+ */
+export interface RunnerOptions {
+  /** 已校验的配置 */
+  config: VisualGuardConfig;
+  /** 浏览器引擎适配器 */
+  adapter: BrowserEngineAdapter;
+  /** 并发数，默认使用配置中的 concurrency */
+  concurrency?: number;
+}
+
+/**
+ * 运行 Visual Guard 完整流水线
+ *
+ * 流程：
+ * 1. 解析场景（viewport × scene）
+ * 2. 启动浏览器引擎
+ * 3. 对每个场景并发执行：采集 → 读取基线 → 对比 → 写基线
+ * 4. 聚合结果为 DiffManifest
+ *
+ * @param options - 运行选项
+ * @returns DiffManifest 统一输出
+ */
+export async function run(options: RunnerOptions): Promise<DiffManifest> {
+  const {config, adapter, concurrency} = options;
+  const startTime = new Date();
+  const runId = `${Date.now()}-${hash(config.project).slice(0, 8)}`;
+  const baselineDir = config.baselineDir ?? '.visual-guard/baselines';
+  const store = createLocalBaselineStore(baselineDir);
+
+  logger.info(`启动 Visual Guard — 项目: ${config.project}, 环境: ${config.env}`);
+  logger.info(`运行 ID: ${runId}`);
+
+  // 解析场景
+  const scenes = resolveScenes(config);
+  logger.info(`共 ${scenes.length} 个场景待执行`);
+
+  // 启动引擎
+  logger.info(`启动浏览器引擎: ${adapter.name}`);
+  const runtime = await adapter.launch({
+    headless: config.browser?.headless ?? true,
+    timeout: config.timeout,
+    args: adapter.name === 'playwright' ? ['--no-sandbox'] : undefined
+  });
+
+  try {
+    // 按视口分组创建 engine context
+    const maxConcurrency =
+      config.renderMode === 'ssr' ? 1 : (concurrency ?? config.concurrency ?? 4);
+    const pLimit = (await import('p-limit')).default;
+    const limit = pLimit(maxConcurrency);
+    const scenarioResults: ScenarioResult[] = [];
+    const viewportContexts = new Map<string, EngineContext>();
+
+    const tasks = scenes.map(scene =>
+      limit(async () => {
+        const vpKey = `${scene.viewport.width}x${scene.viewport.height}`;
+        let context = viewportContexts.get(vpKey);
+        if (!context || config.renderMode === 'ssr') {
+          context = await runtime.createContext({
+            viewport: {
+              width: scene.viewport.width,
+              height: scene.viewport.height,
+              deviceScaleFactor: scene.viewport.deviceScaleFactor,
+              isMobile: scene.viewport.isMobile
+            },
+            locale: scene.viewport.locale,
+            timezoneId: scene.viewport.timezoneId,
+            renderMode: config.renderMode
+          });
+          viewportContexts.set(vpKey, context);
+        }
+
+        try {
+          // 采集
+          logger.info(`采集场景: ${scene.id} (${scene.viewport.name})`);
+          const captureResult = await captureScene(scene, context, {
+            timeout: config.timeout ?? 30000
+          });
+
+          // 读取基线
+          const key = {
+            project: config.project,
+            env: config.env,
+            branch: 'main',
+            sceneId: scene.id,
+            viewport: scene.viewport.name,
+            deviceScaleFactor: scene.viewport.deviceScaleFactor ?? 1,
+            locale: scene.viewport.locale ?? 'en-US'
+          };
+          const baseline = await store.read(key);
+
+          // 对比
+          const pixelResult = await diffPixel(
+            captureResult.snapshot.screenshots.fullPage,
+            baseline?.screenshots.fullPage,
+            config.diff ?? {}
+          );
+
+          const domResult = await diffDom(captureResult.snapshot.dom, baseline?.dom);
+
+          const layoutResult = await diffLayout(
+            captureResult.snapshot.dom,
+            baseline?.dom,
+            config.diff ?? {}
+          );
+
+          const networkResult = await diffNetwork(
+            captureResult.snapshot.network,
+            (baseline?.network ?? []) as unknown as typeof captureResult.snapshot.network
+          );
+
+          const performanceResult = await diffPerformance(
+            captureResult.snapshot.performance,
+            baseline?.performance
+          );
+
+          // 写基线
+          const newBundle: BaselineBundle = {
+            meta: {
+              key,
+              createdAt: baseline?.meta.createdAt ?? new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              version: (baseline?.meta.version ?? 0) + 1,
+              runId,
+              size: {
+                dom: JSON.stringify(captureResult.snapshot.dom).length,
+                screenshots: (captureResult.snapshot.screenshots.fullPage ?? '').length,
+                network: captureResult.snapshot.network.length,
+                performance: captureResult.snapshot.performance ? 1 : 0
+              }
+            },
+            dom: captureResult.snapshot.dom as unknown as Record<string, unknown>,
+            screenshots: {
+              fullPage: captureResult.snapshot.screenshots.fullPage
+                ? Buffer.from(captureResult.snapshot.screenshots.fullPage, 'base64')
+                : undefined,
+              elements: Object.fromEntries(
+                Object.entries(captureResult.snapshot.screenshots.elements ?? {}).map(([k, v]) => [
+                  k,
+                  Buffer.from(v, 'base64')
+                ])
+              )
+            },
+            network: captureResult.snapshot.network as unknown as Array<Record<string, unknown>>,
+            performance: captureResult.snapshot.performance as unknown as
+              | Record<string, unknown>
+              | undefined
+          };
+          await store.write(key, newBundle);
+
+          // 判断状态
+          const hasDiffs =
+            (pixelResult?.diffPixels ?? 0) > 0 ||
+            (domResult?.changeRatio ?? 0) > 0 ||
+            (layoutResult?.changeCount ?? 0) > 0;
+          const status = hasDiffs ? 'changed' : 'passed';
+
+          const result: ScenarioResult = {
+            id: scene.id,
+            name: scene.scene.name,
+            url: scene.url,
+            status,
+            durationMs: captureResult.durationMs,
+            artifacts: {
+              currentScreenshot: captureResult.snapshot.screenshots.fullPage,
+              diffScreenshot: pixelResult?.diffImage
+            },
+            diffs: {
+              pixel: pixelResult,
+              dom: domResult,
+              layout: layoutResult,
+              network: networkResult,
+              performance: performanceResult
+            },
+            errors: []
+          };
+
+          return result;
+        } catch (error) {
+          logger.error(`场景 ${scene.id} 执行失败: ${String(error)}`);
+          return {
+            id: scene.id,
+            name: scene.scene.name,
+            url: scene.url,
+            status: 'errored',
+            durationMs: 0,
+            artifacts: {},
+            diffs: {},
+            errors: [
+              {
+                message: String(error),
+                scenarioId: scene.id,
+                sceneName: scene.scene.name
+              }
+            ]
+          } as ScenarioResult;
+        }
+      })
+    );
+
+    const results = await Promise.all(tasks);
+    scenarioResults.push(...results);
+
+    // 关闭 context
+    for (const ctx of viewportContexts.values()) {
+      await ctx.close();
+    }
+
+    // 聚合总结
+    const summary: Summary = {
+      total: scenarioResults.length,
+      passed: scenarioResults.filter(r => r.status === 'passed').length,
+      failed: scenarioResults.filter(r => r.status === 'failed').length,
+      changed: scenarioResults.filter(r => r.status === 'changed').length,
+      errored: scenarioResults.filter(r => r.status === 'errored').length,
+      pixelDiffCount: scenarioResults.filter(
+        r => r.diffs.pixel && (r.diffs.pixel.diffPixels ?? 0) > 0
+      ).length,
+      domDiffCount: scenarioResults.filter(r => r.diffs.dom && (r.diffs.dom.changeRatio ?? 0) > 0)
+        .length,
+      layoutDiffCount: scenarioResults.filter(
+        r => r.diffs.layout && (r.diffs.layout.changeCount ?? 0) > 0
+      ).length,
+      networkDiffCount: scenarioResults.filter(
+        r => r.diffs.network && r.diffs.network.added.length + r.diffs.network.removed.length > 0
+      ).length,
+      performanceRegressionCount: scenarioResults.filter(
+        r => r.diffs.performance && (r.diffs.performance.regressions?.length ?? 0) > 0
+      ).length
+    };
+
+    const manifest: DiffManifest = {
+      version: '1.0.0',
+      run: {
+        id: runId,
+        project: config.project,
+        env: config.env,
+        branch: 'main',
+        startedAt: startTime.toISOString(),
+        endedAt: new Date().toISOString()
+      },
+      summary,
+      scenarios: scenarioResults
+    };
+
+    logger.info(
+      `执行完成: ${summary.passed} 通过, ${summary.changed} 有变化, ${summary.failed} 失败, ${summary.errored} 错误`
+    );
+
+    return manifest;
+  } finally {
+    await runtime.close();
+  }
+}

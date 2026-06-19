@@ -28,6 +28,8 @@ export interface EngineContextOptions {
   timezoneId?: string;
   extraHTTPHeaders?: Record<string, string>;
   cookies?: CookieInput[];
+  /** 渲染模式，SSR 模式会禁用 serviceWorker + 仅等 domcontentloaded */
+  renderMode?: 'ssr' | 'csr' | 'auto';
 }
 
 /**
