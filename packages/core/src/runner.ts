@@ -15,7 +15,7 @@ import {diffDom, diffLayout, diffNetwork, diffPerformance, diffPixel} from './di
 import type {PluginEventBus} from './plugin-event-bus';
 import {loadPlugins} from './plugin-loader';
 import {resolveScenes} from './scene-resolver';
-import type {HookContext} from './types';
+import {HOOK_NAMES, type HookContext} from './types';
 
 /**
  * 运行器选项
@@ -84,7 +84,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
   logger.info(`启动 Visual Guard — 项目: ${config.project}, 环境: ${config.env}`);
   logger.info(`运行 ID: ${runId}`);
 
-  await eventBus?.emit('beforeRun', baseCtx(config, runId));
+  await eventBus?.emit(HOOK_NAMES.BeforeRun, baseCtx(config, runId));
 
   // 解析场景
   const scenes = resolveScenes(config);
@@ -152,7 +152,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
           };
 
           await eventBus?.emit(
-            'beforeCapture',
+            HOOK_NAMES.BeforeCapture,
             baseCtx(config, runId, {
               scenario: scenarioInfo
             })
@@ -163,7 +163,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
           });
 
           await eventBus?.emit(
-            'afterCapture',
+            HOOK_NAMES.AfterCapture,
             baseCtx(config, runId, {
               scenario: scenarioInfo,
               snapshot: captureResult.snapshot
@@ -240,7 +240,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
 
           // 有基线：执行对比
           await eventBus?.emit(
-            'beforeCompare',
+            HOOK_NAMES.BeforeCompare,
             baseCtx(config, runId, {
               scenario: scenarioInfo,
               snapshot: captureResult.snapshot
@@ -299,7 +299,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
           };
 
           await eventBus?.emit(
-            'afterCompare',
+            HOOK_NAMES.AfterCompare,
             baseCtx(config, runId, {
               scenario: scenarioInfo,
               snapshot: captureResult.snapshot,
@@ -380,11 +380,11 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
       `执行完成: ${summary.baseline > 0 ? `${summary.baseline} 基线建立, ` : ''}${summary.passed} 通过, ${summary.changed} 有变化, ${summary.failed} 失败, ${summary.errored} 错误`
     );
 
-    await eventBus?.emit('afterReport', baseCtx(config, runId, {manifest}));
+    await eventBus?.emit(HOOK_NAMES.AfterReport, baseCtx(config, runId, {manifest}));
 
     return manifest;
   } finally {
-    await eventBus?.emit('afterRun', baseCtx(config, runId));
+    await eventBus?.emit(HOOK_NAMES.AfterRun, baseCtx(config, runId));
     pluginTeardown?.();
     await runtime.close();
   }

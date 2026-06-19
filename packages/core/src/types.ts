@@ -8,7 +8,7 @@ import type {
 } from '@visual-guard/shared';
 
 /**
- * Plugin 生命周期钩子名称
+ * Plugin 生命周期钩子名称（联合类型）
  */
 export type HookName =
   | 'beforeRun'
@@ -22,6 +22,23 @@ export type HookName =
   | 'afterReport'
   | 'onError'
   | 'onWarning';
+
+/**
+ * Plugin 生命周期钩子名称常量（用于 emit/on 调用，避免裸字符串拼写错误）
+ */
+export const HOOK_NAMES = {
+  BeforeRun: 'beforeRun',
+  AfterRun: 'afterRun',
+  BeforeCapture: 'beforeCapture',
+  AfterCapture: 'afterCapture',
+  BeforeScreenshot: 'beforeScreenshot',
+  AfterScreenshot: 'afterScreenshot',
+  BeforeCompare: 'beforeCompare',
+  AfterCompare: 'afterCompare',
+  AfterReport: 'afterReport',
+  OnError: 'onError',
+  OnWarning: 'onWarning'
+} as const;
 
 /**
  * 钩子上下文 — 按 hook 类型分步注入不同数据

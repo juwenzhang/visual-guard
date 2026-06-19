@@ -51,3 +51,4 @@ export type {
   PluginAPI,
   VisualGuardPlugin
 } from './types';
+export {HOOK_NAMES} from './types';
