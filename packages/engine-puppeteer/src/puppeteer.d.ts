@@ -24,6 +24,9 @@ declare module 'puppeteer' {
   }
 
   export class Page {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    createCDPSession(): Promise<any>;
+
     goto(
       url: string,
       options?: {

@@ -17,6 +17,8 @@ export interface CaptureResult {
   sceneId: string;
   snapshot: Snapshot;
   durationMs: number;
+  /** 采集时的活跃页面引用，用于 afterCapture hook 中的性能采集等操作 */
+  page: EnginePage;
 }
 
 export async function captureScene(
@@ -105,10 +107,13 @@ export async function captureScene(
     return {
       sceneId: resolved.id,
       snapshot,
-      durationMs: Date.now() - startTime
+      durationMs: Date.now() - startTime,
+      page
     };
-  } finally {
+  } catch (error) {
+    // 采集失败时关闭页面
     await page.close();
+    throw error;
   }
 }
 

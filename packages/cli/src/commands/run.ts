@@ -22,7 +22,10 @@ export function createRunCommand(): Command {
     .option('--tags <tags>', '按标签筛选场景，逗号分隔')
     .option('--env <env>', '环境名称')
     .option('--write-baseline', '更新基线，后续运行以此为对比基准')
-    .option('--format <format>', '报告格式 (html,json,console)，逗号分隔', 'console')
+    .option(
+      '--format <format>',
+      '报告格式 (html,json,console)，逗号分隔。不指定时使用 config.reporters'
+    )
     .action(async (options: Record<string, string | boolean | undefined>) => {
       logger.info(chalk.cyan('Visual Guard — 视觉回归检测'));
 
@@ -52,7 +55,7 @@ export function createRunCommand(): Command {
       }
 
       // 执行
-      const writeBaseline = options['write-baseline'] === true;
+      const writeBaseline = options['writeBaseline'] === true || options['write-baseline'] === true;
       let manifest: Awaited<ReturnType<typeof run>>;
 
       try {
@@ -68,7 +71,10 @@ export function createRunCommand(): Command {
       }
 
       // 生成报告（先 JSON/HTML，再控制台，确保控制台能列出文件路径）
-      const formats = _parseFormats(options['format'] as string);
+      const formats = _resolveFormats(
+        options['format'] as string | undefined,
+        config.reporters ?? ['console']
+      );
       const outputDir = config.outputDir ?? '.visual-guard/reports';
       const reportFiles: string[] = [];
 
@@ -147,8 +153,18 @@ async function _loadAdapter(engine: string) {
   return (mod as {createCypressAdapter: () => BrowserEngineAdapter}).createCypressAdapter();
 }
 
-function _parseFormats(raw: string): Array<'console' | 'json' | 'html' | 'pdf'> {
+type ReporterFormat = 'console' | 'json' | 'html' | 'pdf';
+
+const VALID_REPORTER_FORMATS = new Set<string>(['console', 'json', 'html', 'pdf']);
+
+/**
+ * 解析报告格式：--format 参数优先，否则使用 config.reporters 配置
+ */
+function _resolveFormats(
+  cliFormat: string | undefined,
+  configReporters: string[]
+): ReporterFormat[] {
+  const raw = cliFormat ?? configReporters.join(',');
   const parts = raw.split(',').map(s => s.trim().toLowerCase());
-  const valid = new Set(['console', 'json', 'html', 'pdf']);
-  return parts.filter((f): f is 'console' | 'json' | 'html' | 'pdf' => valid.has(f));
+  return parts.filter((f): f is ReporterFormat => VALID_REPORTER_FORMATS.has(f));
 }

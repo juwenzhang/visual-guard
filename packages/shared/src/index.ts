@@ -54,6 +54,7 @@ export type {
 // 引擎类型
 export type {
   BrowserEngineAdapter,
+  CDPSession,
   ConsoleHandler,
   ConsoleMessage,
   CookieInput,

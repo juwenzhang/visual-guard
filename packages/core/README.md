@@ -59,7 +59,7 @@ const result = await captureScene(resolvedScene, engineContext, { timeout: 30000
 
 ### `createLocalBaselineStore(baselineDir)`
 
-创建本地文件系统基线存储实例，实现 `BaselineStore` 接口。
+创建本地文件系统基线存储实例，实现 `BaselineStore` 接口。写入基线时会同时保存 `bundle.json`、`meta.json` 和可直接查看的 `screenshots/full.png`。
 
 ```ts
 import { createLocalBaselineStore } from '@visual-guard/core';

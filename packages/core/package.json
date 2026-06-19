@@ -50,6 +50,7 @@
     "consola": "^3.4.0",
     "deep-diff": "^1.0.2",
     "fs-extra": "^11.3.0",
+    "mitt": "^3.0.1",
     "p-limit": "^6.2.0",
     "pixelmatch": "^6.0.0",
     "pngjs": "^7.0.0"

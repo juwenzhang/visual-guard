@@ -12,7 +12,10 @@ import {hash, logger} from '@visual-guard/shared';
 import {createLocalBaselineStore} from './baseline-store';
 import {captureScene} from './capture';
 import {diffDom, diffLayout, diffNetwork, diffPerformance, diffPixel} from './diff';
+import type {PluginEventBus} from './plugin-event-bus';
+import {loadPlugins} from './plugin-loader';
 import {resolveScenes} from './scene-resolver';
+import {HOOK_NAMES, type HookContext} from './types';
 
 /**
  * 运行器选项
@@ -30,6 +33,59 @@ export interface RunnerOptions {
    * - 后续运行：仅在 `writeBaseline: true` 时覆盖旧基线
    */
   writeBaseline?: boolean;
+  /** plugin 事件总线（可选） */
+  eventBus?: PluginEventBus;
+}
+
+/** 构造基础 HookContext */
+function baseCtx(
+  config: VisualGuardConfig,
+  runId: string,
+  overrides?: Partial<HookContext>
+): HookContext {
+  return {
+    runId,
+    project: config.project,
+    env: config.env,
+    branch: 'main',
+    config,
+    ...overrides
+  };
+}
+
+/** 基线模式下的性能占位 diff（无对比基线，仅标记当前值供报告展示） */
+function _baselinePerformanceDiffs(captureResult: {
+  snapshot: {performance?: {navigation: Record<string, number | undefined>}};
+}) {
+  const perf = captureResult.snapshot.performance;
+  if (!perf) return {};
+
+  const metrics = [
+    {key: 'LCP', value: perf.navigation['largestContentfulPaint']},
+    {key: 'FCP', value: perf.navigation['firstContentfulPaint']},
+    {key: 'CLS', value: perf.navigation['cumulativeLayoutShift']},
+    {key: 'TTFB', value: perf.navigation['timeToFirstByte']}
+  ].filter(m => m.value !== undefined);
+
+  return {
+    performance: {
+      regressions: [] as Array<{
+        metric: string;
+        baseline: number;
+        current: number;
+        change: number;
+        changeRatio: number;
+      }>,
+      improvements: metrics.map(m => ({
+        metric: m.key,
+        baseline: m.value as number,
+        current: m.value as number,
+        change: 0,
+        changeRatio: 0
+      })),
+      summary: {totalMetrics: metrics.length, regressed: 0, improved: 0, unchanged: metrics.length}
+    }
+  };
 }
 
 /**
@@ -48,11 +104,22 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
   const {config, adapter, concurrency} = options;
   const startTime = new Date();
   const runId = `${Date.now()}-${hash(config.project).slice(0, 8)}`;
+
+  // 加载 plugin（如果配置了 plugins 且未外部传入 eventBus）
+  let eventBus = options.eventBus;
+  let pluginTeardown: (() => void) | undefined;
+  if (!eventBus && config.plugins && config.plugins.length > 0) {
+    const result = await loadPlugins(config.plugins, config);
+    eventBus = result.bus;
+    pluginTeardown = result.teardown;
+  }
   const baselineDir = config.baselineDir ?? '.visual-guard/baselines';
   const store = createLocalBaselineStore(baselineDir);
 
   logger.info(`启动 Visual Guard — 项目: ${config.project}, 环境: ${config.env}`);
   logger.info(`运行 ID: ${runId}`);
+
+  await eventBus?.emit(HOOK_NAMES.BeforeRun, baseCtx(config, runId));
 
   // 解析场景
   const scenes = resolveScenes(config);
@@ -107,9 +174,40 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
         try {
           // 采集
           logger.info(`采集场景: ${scene.id} (${scene.viewport.name})`);
+
+          const scenarioInfo = {
+            id: scene.id,
+            name: scene.scene.name,
+            url: scene.url,
+            viewport: {
+              width: scene.viewport.width,
+              height: scene.viewport.height,
+              deviceScaleFactor: scene.viewport.deviceScaleFactor ?? 1
+            }
+          };
+
+          await eventBus?.emit(
+            HOOK_NAMES.BeforeCapture,
+            baseCtx(config, runId, {
+              scenario: scenarioInfo
+            })
+          );
+
           const captureResult = await captureScene(scene, context, {
             timeout: config.timeout ?? 30000
           });
+
+          await eventBus?.emit(
+            HOOK_NAMES.AfterCapture,
+            baseCtx(config, runId, {
+              scenario: scenarioInfo,
+              snapshot: captureResult.snapshot,
+              enginePage: captureResult.page
+            })
+          );
+
+          // 插件 hook 执行完毕后关闭页面
+          await captureResult.page.close();
 
           // 读取基线
           const key = {
@@ -162,8 +260,8 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             await store.write(key, newBundle);
           }
 
-          if (isFirstRun) {
-            // 首次运行：仅建立基线
+          if (shouldWrite) {
+            // 首次运行或显式更新基线：写入后不再与旧基线对比
             const result: ScenarioResult = {
               id: scene.id,
               name: scene.scene.name,
@@ -173,13 +271,21 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
               artifacts: {
                 currentScreenshot: captureResult.snapshot.screenshots.fullPage
               },
-              diffs: {},
+              diffs: _baselinePerformanceDiffs(captureResult),
               errors: []
             };
             return result;
           }
 
           // 有基线：执行对比
+          await eventBus?.emit(
+            HOOK_NAMES.BeforeCompare,
+            baseCtx(config, runId, {
+              scenario: scenarioInfo,
+              snapshot: captureResult.snapshot
+            })
+          );
+
           const pixelResult = await diffPixel(
             captureResult.snapshot.screenshots.fullPage,
             baseline.screenshots.fullPage,
@@ -211,6 +317,16 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             (layoutResult?.changeCount ?? 0) > 0;
           const status = hasDiffs ? 'changed' : 'passed';
 
+          // 基线截图（可能为 Buffer 或 JSON 反序列化的 {data: [...]} 对象）
+          let baselineScreenshot: string | undefined;
+          if (baseline.screenshots.fullPage) {
+            const raw = baseline.screenshots.fullPage;
+            const buf = Buffer.isBuffer(raw)
+              ? raw
+              : Buffer.from((raw as {data?: number[]}).data ?? []);
+            baselineScreenshot = buf.toString('base64');
+          }
+
           const result: ScenarioResult = {
             id: scene.id,
             name: scene.scene.name,
@@ -218,6 +334,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             status,
             durationMs: captureResult.durationMs,
             artifacts: {
+              baselineScreenshot,
               currentScreenshot: captureResult.snapshot.screenshots.fullPage,
               diffScreenshot: pixelResult?.diffImage
             },
@@ -230,6 +347,15 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
             },
             errors: []
           };
+
+          await eventBus?.emit(
+            HOOK_NAMES.AfterCompare,
+            baseCtx(config, runId, {
+              scenario: scenarioInfo,
+              snapshot: captureResult.snapshot,
+              scenarioResult: result
+            })
+          );
 
           return result;
         } catch (error) {
@@ -304,8 +430,12 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
       `执行完成: ${summary.baseline > 0 ? `${summary.baseline} 基线建立, ` : ''}${summary.passed} 通过, ${summary.changed} 有变化, ${summary.failed} 失败, ${summary.errored} 错误`
     );
 
+    await eventBus?.emit(HOOK_NAMES.AfterReport, baseCtx(config, runId, {manifest}));
+
     return manifest;
   } finally {
+    await eventBus?.emit(HOOK_NAMES.AfterRun, baseCtx(config, runId));
+    pluginTeardown?.();
     await runtime.close();
   }
 }

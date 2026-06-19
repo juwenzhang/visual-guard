@@ -9,7 +9,7 @@ import type {
   BaselineStore,
   CleanPolicy
 } from '@visual-guard/shared';
-import {generateBaselinePath} from '@visual-guard/shared';
+import {generateBaselinePath, generateScreenshotPath} from '@visual-guard/shared';
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -107,6 +107,7 @@ export function createLocalBaselineStore(baselineDir: string): BaselineStore {
       const bundlePath = path.join(dir, 'bundle.json');
       await writeJson(bundlePath, bundle);
       await writeJson(path.join(dir, 'meta.json'), bundle.meta);
+      await writeScreenshots(dir, bundle);
     },
 
     async list(query) {
@@ -175,6 +176,25 @@ export function createLocalBaselineStore(baselineDir: string): BaselineStore {
       return {deleted, kept};
     }
   };
+}
+
+async function writeScreenshots(dir: string, bundle: BaselineBundle): Promise<void> {
+  if (bundle.screenshots.fullPage) {
+    await writePng(generateScreenshotPath(dir, 'full'), bundle.screenshots.fullPage);
+  }
+
+  const elements = bundle.screenshots.elements ?? {};
+  for (const [selector, screenshot] of Object.entries(elements)) {
+    await writePng(
+      generateScreenshotPath(dir, 'element', encodeURIComponent(selector)),
+      screenshot
+    );
+  }
+}
+
+async function writePng(filePath: string, data: Buffer): Promise<void> {
+  await ensureDir(path.dirname(filePath));
+  await fs.writeFile(filePath, data);
 }
 
 function _matchesQuery(meta: BaselineMeta, query: BaselineQuery): boolean {

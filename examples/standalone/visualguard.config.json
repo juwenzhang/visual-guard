@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/visual-guard/schema/main/visualguard.config.json",
   "project": "my-web-app",
   "env": "development",
-  "baseUrl": "https://www.baidu.com",
+  "baseUrl": "https://juejin.cn/",
   "renderMode": "auto",
   "outputDir": ".visual-guard/reports",
   "baselineDir": ".visual-guard/baselines",
@@ -43,13 +43,26 @@
       "waitForSelector": "body"
     },
     {
-      "id": "about",
-      "name": "关于页",
-      "path": "/about",
+      "id": "backend",
+      "name": "、后端",
+      "path": "/backend",
       "tags": ["smoke"],
       "waitForSelector": "body",
       "waitForTimeout": 2000
     }
   ],
-  "reporters": ["console", "json", "html"]
+  "reporters": ["console", "json", "html"],
+  "plugins": [
+    {
+      "name": "perf",
+      "options": {
+        "budget": {
+          "lcp": 2500,
+          "fcp": 1800,
+          "cls": 0.1,
+          "ttfb": 800
+        }
+      }
+    }
+  ]
 }
