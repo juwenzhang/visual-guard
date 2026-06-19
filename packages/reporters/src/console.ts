@@ -52,14 +52,15 @@ export function generateConsoleReport(manifest: DiffManifest, reportFiles: strin
         lines.push(`    ${chalk.blue('📸 基线截图已保存')}`);
       }
 
-      if (
-        scene.diffs.pixel &&
-        scene.diffs.pixel.diffRatio !== undefined &&
-        scene.diffs.pixel.diffRatio > 0
-      ) {
-        const ratio = (scene.diffs.pixel.diffRatio * 100).toFixed(2);
+      if (scene.diffs.pixel) {
+        const ratio =
+          scene.diffs.pixel.diffRatio !== undefined
+            ? (scene.diffs.pixel.diffRatio * 100).toFixed(2)
+            : '—';
+        const hasDiff = (scene.diffs.pixel.diffRatio ?? 0) > 0;
+        const color = hasDiff ? chalk.yellow : chalk.gray;
         lines.push(
-          `    ${chalk.yellow('◉')} 像素: ${chalk.yellow(`${ratio}%`)} (${scene.diffs.pixel.diffPixels} / ${scene.diffs.pixel.totalPixels} px)`
+          `    ${color('◉')} 像素: ${color(`${ratio}%`)} (${scene.diffs.pixel.diffPixels} / ${scene.diffs.pixel.totalPixels} px)`
         );
       }
       if (scene.diffs.dom && scene.diffs.dom.changeRatio > 0) {

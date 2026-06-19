@@ -38,7 +38,7 @@ function _buildHtml(manifest: DiffManifest): string {
       const statusClass = _statusClass(s.status);
       const statusLabel = _statusLabel(s.status);
       const pixelInfo = s.diffs.pixel
-        ? `${s.diffs.pixel.diffPixels} / ${s.diffs.pixel.totalPixels} px`
+        ? `${s.diffs.pixel.diffPixels} / ${s.diffs.pixel.totalPixels} px${s.diffs.pixel.diffRatio !== undefined ? ` (${(s.diffs.pixel.diffRatio * 100).toFixed(1)}%)` : ''}`
         : '—';
       const domChanges = s.diffs.dom
         ? `+${s.diffs.dom.added.length} / -${s.diffs.dom.removed.length} / ~${s.diffs.dom.changed.length}`
