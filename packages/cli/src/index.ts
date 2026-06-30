@@ -6,7 +6,6 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {Command} from 'commander';
 import {createBaselineCommand} from './commands/baseline';
-import {createCypressCommand} from './commands/cypress';
 import {createInitCommand} from './commands/init';
 import {createRunCommand} from './commands/run';
 
@@ -24,8 +23,7 @@ program
   .version(pkg.version)
   .addCommand(createInitCommand())
   .addCommand(createRunCommand())
-  .addCommand(createBaselineCommand())
-  .addCommand(createCypressCommand());
+  .addCommand(createBaselineCommand());
 
 export function main(argv: string[] = process.argv): void {
   program.parse(argv);

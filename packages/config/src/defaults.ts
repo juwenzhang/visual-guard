@@ -48,6 +48,18 @@ const defaultPerformance = {
 const defaultReporters = ['console'] as const;
 
 /**
+ * 默认稳定策略
+ */
+const defaultStabilize = {
+  enabled: true,
+  freezeTime: true,
+  disableAnimations: true,
+  freezeRAF: true,
+  freezeInterval: false,
+  waitForFonts: true
+};
+
+/**
  * Visual Guard 默认配置
  */
 export const DEFAULT_CONFIG: Partial<VisualGuardConfig> = {
@@ -63,6 +75,7 @@ export const DEFAULT_CONFIG: Partial<VisualGuardConfig> = {
   performance: defaultPerformance,
   reporters: [...defaultReporters],
   renderMode: 'auto' as const,
+  stabilize: defaultStabilize,
   plugins: []
 };
 

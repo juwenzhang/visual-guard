@@ -33,6 +33,7 @@ export type {
   RenderMode,
   ReporterType,
   SceneConfig,
+  StabilizeConfig,
   ViewportConfig,
   VisualGuardConfig
 } from './types/config';
@@ -49,6 +50,10 @@ export type {
   RuntimeError,
   ScenarioResult,
   ScenarioStatus,
+  SemanticChange,
+  SemanticChangeType,
+  SemanticDiffReport,
+  SemanticSeverity,
   Summary
 } from './types/diff';
 // 引擎类型

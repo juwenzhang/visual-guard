@@ -10,7 +10,7 @@ const ENV_PREFIX = 'VG_';
  * 从环境变量读取并覆盖配置
  *
  * 支持的环境变量：
- * - `VG_ENGINE`：浏览器引擎（playwright/puppeteer/cypress）
+ * - `VG_ENGINE`：浏览器引擎（playwright/puppeteer）
  * - `VG_HEADLESS`：是否无头模式（true/false）
  * - `VG_BASE_URL`：基础 URL
  * - `VG_TIMEOUT`：超时时间（ms）
@@ -42,7 +42,7 @@ export function applyEnvOverrides(config: VisualGuardConfig): VisualGuardConfig 
   // VG_ENGINE
   if (overrides['engine']) {
     const val = overrides['engine'];
-    if (val === 'playwright' || val === 'puppeteer' || val === 'cypress') {
+    if (val === 'playwright' || val === 'puppeteer') {
       result.browser = result.browser ?? {engine: val};
       result.browser.engine = val;
     }

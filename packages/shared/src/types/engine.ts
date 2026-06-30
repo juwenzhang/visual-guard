@@ -1,7 +1,7 @@
 /**
  * 浏览器引擎名称
  */
-export type BrowserEngineName = 'playwright' | 'puppeteer' | 'cypress';
+export type BrowserEngineName = 'playwright' | 'puppeteer';
 
 /**
  * 引擎启动选项
@@ -189,7 +189,7 @@ export interface EnginePage {
   evaluate<T>(fn: (...args: unknown[]) => T, ...args: unknown[]): Promise<T>;
   screenshot(options: ScreenshotOptions): Promise<Buffer>;
   elementScreenshot?(selector: string, options?: ScreenshotOptions): Promise<Buffer>;
-  /** 获取 CDP session（用于性能采集、网络拦截增强等）。Cypress 引擎不支持。 */
+  /** 获取 CDP session（用于性能采集、网络拦截增强等）。 */
   getCDPSession?(): Promise<CDPSession>;
   onConsole?(handler: ConsoleHandler): void;
   onRequest?(handler: RequestHandler): void;

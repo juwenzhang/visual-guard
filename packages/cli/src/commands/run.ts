@@ -4,7 +4,8 @@ import {run} from '@visual-guard/core';
 import {
   generateConsoleReport,
   generateHtmlReport,
-  generateJsonReport
+  generateJsonReport,
+  generateReportsIndex
 } from '@visual-guard/reporters';
 import type {BrowserEngineAdapter} from '@visual-guard/shared';
 import {logger} from '@visual-guard/shared';
@@ -17,7 +18,7 @@ export function createRunCommand(): Command {
   cmd
     .description('执行视觉回归检测')
     .option('-c, --config <path>', '配置文件路径')
-    .option('--engine <engine>', '浏览器引擎 (playwright | puppeteer | cypress)，需安装对应包')
+    .option('--engine <engine>', '浏览器引擎 (playwright | puppeteer)，需安装对应包')
     .option('--scenes <scenes>', '仅执行指定场景，逗号分隔')
     .option('--tags <tags>', '按标签筛选场景，逗号分隔')
     .option('--env <env>', '环境名称')
@@ -36,7 +37,7 @@ export function createRunCommand(): Command {
       if (typeof options['engine'] === 'string') {
         config.browser = config.browser ?? {engine: 'playwright'};
         const eng = options['engine'];
-        if (eng === 'playwright' || eng === 'puppeteer' || eng === 'cypress') {
+        if (eng === 'playwright' || eng === 'puppeteer') {
           config.browser.engine = eng;
         }
       }
@@ -80,14 +81,19 @@ export function createRunCommand(): Command {
 
       for (const fmt of formats) {
         if (fmt === 'json') {
-          const filePath = await generateJsonReport(manifest, outputDir, manifest.run.id);
-          reportFiles.push(filePath);
+          const filePaths = await generateJsonReport(manifest, outputDir, manifest.run.id);
+          reportFiles.push(...filePaths);
         }
         if (fmt === 'html') {
           const filePath = await generateHtmlReport(manifest, outputDir, manifest.run.id);
           reportFiles.push(filePath);
         }
       }
+
+      // 更新运行历史索引
+      await generateReportsIndex(outputDir).catch(() => {
+        // 索引生成失败不阻断主流程
+      });
 
       if (formats.includes('console')) {
         const output = generateConsoleReport(manifest, reportFiles);
@@ -110,8 +116,7 @@ export function createRunCommand(): Command {
 
 const ENGINE_PACKAGES = {
   playwright: '@visual-guard/engine-playwright',
-  puppeteer: '@visual-guard/engine-puppeteer',
-  cypress: '@visual-guard/engine-cypress'
+  puppeteer: '@visual-guard/engine-puppeteer'
 } as const;
 
 type EngineName = keyof typeof ENGINE_PACKAGES;
@@ -127,7 +132,7 @@ async function _tryLoadEngine(name: EngineName) {
 
 async function _loadAdapter(engine: string) {
   const name = (
-    engine === 'playwright' || engine === 'puppeteer' || engine === 'cypress' ? engine : null
+    engine === 'playwright' || engine === 'puppeteer' ? engine : null
   ) as EngineName | null;
 
   if (!name) {
@@ -147,10 +152,7 @@ async function _loadAdapter(engine: string) {
   if (name === 'playwright') {
     return (mod as {createPlaywrightAdapter: () => BrowserEngineAdapter}).createPlaywrightAdapter();
   }
-  if (name === 'puppeteer') {
-    return (mod as {createPuppeteerAdapter: () => BrowserEngineAdapter}).createPuppeteerAdapter();
-  }
-  return (mod as {createCypressAdapter: () => BrowserEngineAdapter}).createCypressAdapter();
+  return (mod as {createPuppeteerAdapter: () => BrowserEngineAdapter}).createPuppeteerAdapter();
 }
 
 type ReporterFormat = 'console' | 'json' | 'html' | 'pdf';

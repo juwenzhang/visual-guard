@@ -5,12 +5,15 @@ import type {
   NetworkRecord,
   RequestInfo,
   ResponseInfo,
-  Snapshot
+  Snapshot,
+  StabilizeConfig
 } from '@visual-guard/shared';
 import type {ResolvedScene} from './scene-resolver';
 
 export interface CaptureOptions {
   timeout: number;
+  /** 动态内容稳定策略 */
+  stabilize?: StabilizeConfig;
 }
 
 export interface CaptureResult {
@@ -34,6 +37,9 @@ export async function captureScene(
       timeout: options.timeout,
       waitUntil: 'load'
     });
+
+    // 注入页面稳定策略（冻结时间、禁用动画等），再做后续等待和截图
+    await injectStabilizers(page, options.stabilize);
 
     await _waitForPage(resolved, page, options.timeout);
     await _executeActions(resolved, page);
@@ -167,6 +173,126 @@ async function _executeActions(resolved: ResolvedScene, page: EnginePage): Promi
   }
 }
 
+/**
+ * 注入页面动态内容稳定策略
+ *
+ * 在 goto 之后、截图之前执行，减少时间戳、动画、字体等动态因素导致的误报。
+ * 策略按顺序执行：冻结时间 → 禁用动画 → 冻结 rAF → 冻结 setInterval → 遮罩区域。
+ * 字体加载等待在最后执行（异步）。
+ */
+export async function injectStabilizers(
+  page: EnginePage,
+  stabilize?: StabilizeConfig
+): Promise<void> {
+  if (!stabilize?.enabled) return;
+
+  const freezeDate = stabilize.freezeDate ?? new Date().toISOString();
+
+  // 稳定脚本在浏览器上下文中执行
+  // biome-ignore lint/suspicious/noExplicitAny: 浏览器 evaluate 上下文，需要操作全局对象
+  await (page.evaluate as any)(
+    (opts: {
+      freezeTime: boolean;
+      freezeDate: string;
+      disableAnimations: boolean;
+      freezeRAF: boolean;
+      freezeInterval: boolean;
+      maskSelectors: string[] | null;
+    }) => {
+      // biome-ignore lint/suspicious/noExplicitAny: 浏览器端覆盖全局 Date/rAF/setInterval
+      const win = window as any;
+      const doc = document;
+
+      // 1. 冻结 Date.now() 和 new Date()
+      if (opts.freezeTime) {
+        const frozenNow = new Date(opts.freezeDate).getTime();
+        const OrigDate = Date;
+        const FakeDate = function (this: Date, ...a: unknown[]) {
+          if (a.length === 0) return new OrigDate(frozenNow) as Date;
+          return new (OrigDate as unknown as new (...args_: unknown[]) => Date)(...a) as Date;
+        } as unknown as DateConstructor;
+        Object.defineProperty(FakeDate, 'prototype', {value: OrigDate.prototype});
+        FakeDate.UTC = OrigDate.UTC;
+        FakeDate.parse = OrigDate.parse;
+        FakeDate.now = () => frozenNow;
+        win.Date = FakeDate;
+      }
+
+      // 2. 禁用 CSS animation / transition
+      if (opts.disableAnimations) {
+        const style = doc.createElement('style');
+        style.id = 'vg-stabilize-anim';
+        style.textContent =
+          '*, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; animation-delay: 0s !important; transition-delay: 0s !important; }';
+        doc.head.appendChild(style);
+      }
+
+      // 3. 冻结 requestAnimationFrame
+      if (opts.freezeRAF) {
+        let rafId = 0;
+        win.requestAnimationFrame = (cb: FrameRequestCallback): number => {
+          const id = ++rafId;
+          setTimeout(() => {
+            try {
+              cb(performance.now());
+            } catch {
+              /* 忽略 */
+            }
+          }, 0);
+          return id;
+        };
+        win.cancelAnimationFrame = () => {};
+      }
+
+      // 4. 冻结 setInterval（可选）
+      if (opts.freezeInterval) {
+        // biome-ignore lint/suspicious/noExplicitAny: 浏览器端 setInterval mock
+        win.setInterval = (fn: any) => {
+          setTimeout(fn, 0);
+          return 0;
+        };
+      }
+
+      // 5. 遮罩动态区域
+      if (opts.maskSelectors && opts.maskSelectors.length > 0) {
+        for (let i = 0; i < opts.maskSelectors.length; i++) {
+          try {
+            const els = doc.querySelectorAll(opts.maskSelectors[i] as string);
+            for (let j = 0; j < els.length; j++) {
+              const el = els[j] as HTMLElement;
+              if (el?.style) {
+                el.style.setProperty('background', '#999', 'important');
+                el.style.setProperty('color', 'transparent', 'important');
+                el.style.setProperty('opacity', '0.3', 'important');
+              }
+            }
+          } catch {
+            /* 无效选择器跳过 */
+          }
+        }
+      }
+    },
+    {
+      freezeTime: stabilize.freezeTime ?? true,
+      freezeDate,
+      disableAnimations: stabilize.disableAnimations ?? true,
+      freezeRAF: stabilize.freezeRAF ?? true,
+      freezeInterval: stabilize.freezeInterval ?? false,
+      maskSelectors: stabilize.maskSelectors ?? null
+      // biome-ignore lint/suspicious/noExplicitAny: evaluate 参数需要动态类型
+    } as any
+  );
+
+  // 6. 等待字体加载完成（异步，独立执行）
+  if (stabilize.waitForFonts ?? true) {
+    try {
+      await page.evaluate(() => document.fonts.ready);
+    } catch {
+      /* 字体 API 不可用时静默跳过 */
+    }
+  }
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: DOM 序列化返回类型为 any 树
 function _serializeDom(): any {
   function serialize(node: Node): unknown {
@@ -186,10 +312,13 @@ function _serializeDom(): any {
       attrs[attr.name] = attr.value;
     }
     const rect = el.getBoundingClientRect();
+    // 使用 getAttribute('class') 兼容 SVG 元素（SVG className 是 SVGAnimatedString 而非 string）
+    const cls = el.getAttribute('class') || undefined;
+
     return {
       tagName: el.tagName.toLowerCase(),
       id: el.id || undefined,
-      className: el.className || undefined,
+      className: cls,
       attributes: attrs,
       text: children.length === 0 && el.textContent ? el.textContent.trim() : undefined,
       children,

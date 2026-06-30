@@ -19,7 +19,7 @@ const ViewportConfigSchema = z.object({
  * 浏览器配置 schema
  */
 const BrowserConfigSchema = z.object({
-  engine: z.enum(['playwright', 'puppeteer', 'cypress']),
+  engine: z.enum(['playwright', 'puppeteer']),
   headless: z.boolean().optional(),
   launchOptions: z.record(z.unknown()).optional(),
   contextOptions: z.record(z.unknown()).optional()
@@ -114,6 +114,20 @@ const PluginConfigSchema = z.object({
 });
 
 /**
+ * 动态内容稳定策略 schema
+ */
+const StabilizeConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  freezeTime: z.boolean().optional(),
+  freezeDate: z.string().optional(),
+  disableAnimations: z.boolean().optional(),
+  freezeRAF: z.boolean().optional(),
+  freezeInterval: z.boolean().optional(),
+  waitForFonts: z.boolean().optional(),
+  maskSelectors: z.array(z.string()).optional()
+});
+
+/**
  * Visual Guard 完整配置 schema
  */
 const VisualGuardConfigSchema = z.object({
@@ -133,6 +147,7 @@ const VisualGuardConfigSchema = z.object({
   performance: PerformanceConfigSchema.optional(),
   scenarios: z.array(SceneConfigSchema).min(1, 'scenarios 至少配置一个场景'),
   reporters: z.array(ReporterTypeSchema).optional(),
+  stabilize: StabilizeConfigSchema.optional(),
   plugins: z.array(PluginConfigSchema).optional()
 });
 

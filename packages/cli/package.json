@@ -43,7 +43,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@visual-guard/engine-cypress": "workspace:*",
     "@visual-guard/engine-playwright": "workspace:*",
     "@visual-guard/engine-puppeteer": "workspace:*",
     "tsup": "^8.3.0",
@@ -63,14 +62,10 @@
     "ora": "^8.2.0"
   },
   "peerDependencies": {
-    "@visual-guard/engine-cypress": "workspace:*",
     "@visual-guard/engine-playwright": "workspace:*",
     "@visual-guard/engine-puppeteer": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@visual-guard/engine-cypress": {
-      "optional": true
-    },
     "@visual-guard/engine-playwright": {
       "optional": true
     },

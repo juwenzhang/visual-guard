@@ -16,9 +16,5 @@ export default defineConfig({
   treeshake: true,
   target: 'node18',
   // 引擎包运行时动态加载，不打包进 CLI
-  external: [
-    '@visual-guard/engine-playwright',
-    '@visual-guard/engine-puppeteer',
-    '@visual-guard/engine-cypress'
-  ]
+  external: ['@visual-guard/engine-playwright', '@visual-guard/engine-puppeteer']
 });

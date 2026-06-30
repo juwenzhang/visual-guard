@@ -3,7 +3,7 @@
  *
  * @default "playwright"
  */
-export type BrowserEngineName = 'playwright' | 'puppeteer' | 'cypress';
+export type BrowserEngineName = 'playwright' | 'puppeteer';
 
 /**
  * 视口配置 — 定义浏览器窗口大小和设备模拟参数
@@ -151,6 +151,30 @@ export type ReporterType = 'html' | 'json' | 'console' | 'pdf';
 export type RenderMode = 'ssr' | 'csr' | 'auto';
 
 /**
+ * 动态内容稳定策略配置
+ *
+ * 在截图前注入页面脚本，冻结时间、禁用动画等，减少因动态内容导致的误报。
+ */
+export interface StabilizeConfig {
+  /** 是否启用稳定策略，默认 true */
+  enabled?: boolean;
+  /** 冻结 Date.now() 和 new Date() 为固定值，默认 true */
+  freezeTime?: boolean;
+  /** 自定义冻结时间（ISO 8601），不填则使用采集启动时间 */
+  freezeDate?: string;
+  /** 禁用 CSS animation 和 transition，默认 true */
+  disableAnimations?: boolean;
+  /** 冻结 requestAnimationFrame 为同步回调，默认 true */
+  freezeRAF?: boolean;
+  /** 冻结 setInterval，默认 false（可能影响 SPA 路由） */
+  freezeInterval?: boolean;
+  /** 等待 document.fonts.ready 后再截图，默认 true */
+  waitForFonts?: boolean;
+  /** 截图前涂上固定色块的 CSS 选择器列表（用于遮罩动态广告等） */
+  maskSelectors?: string[];
+}
+
+/**
  * Visual Guard 主配置 — 完整配置入口
  *
  * @example 最小配置
@@ -195,6 +219,8 @@ export interface VisualGuardConfig {
   scenarios: SceneConfig[];
   /** 报告输出格式，默认 ["console"] */
   reporters?: ReporterType[];
+  /** 动态内容稳定策略，默认启用 */
+  stabilize?: StabilizeConfig;
   /** 插件列表 */
   plugins?: PluginConfig[];
 }

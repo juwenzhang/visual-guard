@@ -164,6 +164,31 @@ export async function diffLayout(
   };
 }
 
+/**
+ * 从 DOM 节点构建可读的 CSS 选择器路径
+ *
+ * 例如：html > body > div#main > nav.header
+ */
+function _buildSelector(node: Record<string, unknown>): string {
+  const tag = (node['tagName'] as string) ?? 'element';
+  const id = node['id'] as string | undefined;
+  const cls = node['className'];
+
+  let sel = tag;
+  if (id) sel += `#${id}`;
+  if (cls) {
+    // SVG 元素的 className 可能是 SVGAnimatedString 对象，取 baseVal
+    const clsStr =
+      typeof cls === 'string'
+        ? cls
+        : ((cls as Record<string, unknown>)['baseVal'] as string | undefined);
+    if (clsStr && typeof clsStr === 'string') {
+      sel += `.${clsStr.split(/\s+/).filter(Boolean).join('.')}`;
+    }
+  }
+  return sel;
+}
+
 function _compareLayout(
   current: unknown,
   baseline: unknown,
@@ -178,6 +203,9 @@ function _compareLayout(
   const cur = current as Record<string, unknown>;
   const base = baseline as Record<string, unknown>;
 
+  // 构建当前节点的可读选择器
+  const nodeSelector = _buildSelector(cur);
+
   if (cur['boundings'] && base['boundings']) {
     const cb = cur['boundings'] as {x: number; y: number; width: number; height: number};
     const bb = base['boundings'] as {x: number; y: number; width: number; height: number};
@@ -187,7 +215,7 @@ function _compareLayout(
 
     if (distance > maxDistance) {
       moved.push({
-        selector: path || 'unknown',
+        selector: nodeSelector,
         oldBounds: {x: bb.x, y: bb.y, width: bb.width, height: bb.height},
         newBounds: {x: cb.x, y: cb.y, width: cb.width, height: cb.height},
         distance
@@ -196,7 +224,7 @@ function _compareLayout(
 
     if (cb.width !== bb.width || cb.height !== bb.height) {
       resized.push({
-        selector: path || 'unknown',
+        selector: nodeSelector,
         oldBounds: {x: bb.x, y: bb.y, width: bb.width, height: bb.height},
         newBounds: {x: cb.x, y: cb.y, width: cb.width, height: cb.height}
       });
@@ -207,8 +235,7 @@ function _compareLayout(
   const baseChildren = Array.isArray(base['children']) ? base['children'] : [];
   const maxLen = Math.max(curChildren.length, baseChildren.length);
   for (let i = 0; i < maxLen; i++) {
-    const childPath = path ? `${path} > ${i}` : `${i}`;
-    _compareLayout(curChildren[i], baseChildren[i], childPath, maxDistance, moved, resized);
+    _compareLayout(curChildren[i], baseChildren[i], '', maxDistance, moved, resized);
   }
 }
 

@@ -145,6 +145,8 @@ export interface ScenarioResult {
     network?: NetworkDiffResult;
     performance?: PerformanceDiffResult;
   };
+  /** 语义化差异报告（AI/人类可读） */
+  semantic?: SemanticDiffReport;
   errors: RuntimeError[];
   warnings?: string[];
 }
@@ -188,4 +190,47 @@ export interface DiffManifest {
   run: RunInfo;
   summary: Summary;
   scenarios: ScenarioResult[];
+}
+
+// ======== 语义化差异（AI / 人类可读）========
+
+/**
+ * 语义化差异类型
+ */
+export type SemanticChangeType = 'visual' | 'dom' | 'layout' | 'network' | 'performance';
+
+/**
+ * 差异严重程度
+ */
+export type SemanticSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+/**
+ * 单条语义化差异
+ *
+ * 将 pixelmatch / deep-diff / 布局坐标等底层算法输出，
+ * 转化为自然语言描述 + 结构化关键信息。
+ */
+export interface SemanticChange {
+  /** 差异类型 */
+  type: SemanticChangeType;
+  /** 受影响的元素选择器（如有） */
+  element?: string;
+  /** 严重程度 */
+  severity: SemanticSeverity;
+  /** 人类/AI 可读的差异描述 */
+  description: string;
+  /** 扩展详情（各类型特定的结构化字段） */
+  detail: Record<string, unknown>;
+}
+
+/**
+ * 单场景的语义化差异汇总
+ */
+export interface SemanticDiffReport {
+  scenarioId: string;
+  scenarioName: string;
+  url: string;
+  viewport: string;
+  totalChanges: number;
+  changes: SemanticChange[];
 }

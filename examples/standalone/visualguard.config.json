@@ -1,8 +1,7 @@
 {
-  "$schema": "https://raw.githubusercontent.com/visual-guard/schema/main/visualguard.config.json",
-  "project": "my-web-app",
+  "project": "standalone",
   "env": "development",
-  "baseUrl": "https://juejin.cn/",
+  "baseUrl": "https://juejin.cn",
   "renderMode": "auto",
   "outputDir": ".visual-guard/reports",
   "baselineDir": ".visual-guard/baselines",
@@ -36,31 +35,24 @@
   },
   "scenarios": [
     {
-      "id": "home",
+      "id": "root",
       "name": "首页",
       "path": "/",
       "tags": ["smoke"],
       "waitForSelector": "body"
-    },
-    {
-      "id": "backend",
-      "name": "、后端",
-      "path": "/backend",
-      "tags": ["smoke"],
-      "waitForSelector": "body",
-      "waitForTimeout": 2000
     }
   ],
   "reporters": ["console", "json", "html"],
   "plugins": [
     {
-      "name": "perf",
+      "name": "notify",
       "options": {
-        "budget": {
-          "lcp": 2500,
-          "fcp": 1800,
-          "cls": 0.1,
-          "ttfb": 800
+        "email": {
+          "host": "smtp.qq.com",
+          "port": 465,
+          "user": "env:VG_EMAIL_USER",
+          "pass": "env:VG_EMAIL_PASS",
+          "to": "env:VG_EMAIL_TO"
         }
       }
     }

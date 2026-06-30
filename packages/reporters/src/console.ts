@@ -52,27 +52,43 @@ export function generateConsoleReport(manifest: DiffManifest, reportFiles: strin
         lines.push(`    ${chalk.blue('📸 基线截图已保存')}`);
       }
 
-      if (scene.diffs.pixel) {
-        const ratio =
-          scene.diffs.pixel.diffRatio !== undefined
-            ? (scene.diffs.pixel.diffRatio * 100).toFixed(2)
-            : '—';
-        const hasDiff = (scene.diffs.pixel.diffRatio ?? 0) > 0;
-        const color = hasDiff ? chalk.yellow : chalk.gray;
-        lines.push(
-          `    ${color('◉')} 像素: ${color(`${ratio}%`)} (${scene.diffs.pixel.diffPixels} / ${scene.diffs.pixel.totalPixels} px)`
-        );
-      }
-      if (scene.diffs.dom && scene.diffs.dom.changeRatio > 0) {
-        const r = (scene.diffs.dom.changeRatio * 100).toFixed(2);
-        lines.push(
-          `    ${chalk.yellow('◈')} DOM: ${chalk.yellow(`${r}%`)} (+${scene.diffs.dom.added.length}/-${scene.diffs.dom.removed.length}/~${scene.diffs.dom.changed.length})`
-        );
-      }
-      if (scene.diffs.layout && scene.diffs.layout.changeCount > 0) {
-        lines.push(
-          `    ${chalk.yellow('↕')} 布局: ${chalk.yellow(String(scene.diffs.layout.changeCount))} 处偏移`
-        );
+      // 优先使用语义化摘要
+      if (scene.semantic && scene.semantic.changes.length > 0) {
+        for (const c of scene.semantic.changes) {
+          const icon =
+            c.severity === 'critical'
+              ? '🔴'
+              : c.severity === 'high'
+                ? '🟠'
+                : c.severity === 'medium'
+                  ? '🟡'
+                  : '🔵';
+          lines.push(`    ${icon} [${c.type}] ${c.description}`);
+        }
+      } else if (scene.status !== 'baseline') {
+        // fallback: raw diff 数据
+        if (scene.diffs.pixel) {
+          const ratio =
+            scene.diffs.pixel.diffRatio !== undefined
+              ? (scene.diffs.pixel.diffRatio * 100).toFixed(2)
+              : '—';
+          const hasDiff = (scene.diffs.pixel.diffRatio ?? 0) > 0;
+          const color = hasDiff ? chalk.yellow : chalk.gray;
+          lines.push(
+            `    ${color('◉')} 像素: ${color(`${ratio}%`)} (${scene.diffs.pixel.diffPixels} / ${scene.diffs.pixel.totalPixels} px)`
+          );
+        }
+        if (scene.diffs.dom && scene.diffs.dom.changeRatio > 0) {
+          const r = (scene.diffs.dom.changeRatio * 100).toFixed(2);
+          lines.push(
+            `    ${chalk.yellow('◈')} DOM: ${chalk.yellow(`${r}%`)} (+${scene.diffs.dom.added.length}/-${scene.diffs.dom.removed.length}/~${scene.diffs.dom.changed.length})`
+          );
+        }
+        if (scene.diffs.layout && scene.diffs.layout.changeCount > 0) {
+          lines.push(
+            `    ${chalk.yellow('↕')} 布局: ${chalk.yellow(String(scene.diffs.layout.changeCount))} 处偏移`
+          );
+        }
       }
 
       for (const err of scene.errors) {

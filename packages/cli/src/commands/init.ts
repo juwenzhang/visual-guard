@@ -35,8 +35,7 @@ export function createInitCommand(): Command {
       message: '浏览器引擎',
       choices: [
         {name: 'playwright (推荐)', value: 'playwright'},
-        {name: 'cypress (桥接模式，规划中)', value: 'cypress'},
-        {name: 'puppeteer (实验性，暂不推荐)', value: 'puppeteer'}
+        {name: 'puppeteer (实验性)', value: 'puppeteer'}
       ]
     });
 
@@ -85,6 +84,72 @@ export function createInitCommand(): Command {
           ? ['console', 'json']
           : ['console'];
 
+    // Webhook 通知
+    const plugins: Array<{name: string; options?: Record<string, unknown>}> = [];
+    const enableNotify = await confirm({
+      message: 'CI 运行后通知（Webhook / 邮件）？',
+      default: false
+    });
+    if (enableNotify) {
+      const channel = await select({
+        message: '通知渠道',
+        choices: [
+          {name: '企业微信机器人', value: 'wecom'},
+          {name: '飞书机器人', value: 'feishu'},
+          {name: '钉钉机器人', value: 'dingtalk'},
+          {name: 'QQ 邮箱 (SMTP)', value: 'email'},
+          {name: '通用 Webhook', value: 'generic'}
+        ]
+      });
+
+      if (channel === 'email') {
+        const prefix = 'VG_EMAIL_';
+        const smtpHost = await input({message: 'SMTP 服务器', default: 'smtp.qq.com'});
+        const smtpPort = await input({message: 'SMTP 端口', default: '465'});
+        const smtpUser = await input({message: '发件邮箱（如 xxx@qq.com）'});
+        const smtpPass = await input({message: 'SMTP 授权码（QQ 邮箱 → 设置 → 账户 → POP3/SMTP）'});
+        const to = await input({message: '收件邮箱'});
+        plugins.push({
+          name: 'notify',
+          options: {
+            email: {
+              host: smtpHost,
+              port: Number(smtpPort),
+              user: `env:${prefix}USER`,
+              pass: `env:${prefix}PASS`,
+              to: `env:${prefix}TO`
+            }
+          }
+        });
+        // 生成 .env 示例
+        await _writeEnvExample(process.cwd(), [
+          ['# Visual Guard — 邮件通知配置', ''],
+          [`${prefix}USER=${smtpUser}`, ''],
+          [`${prefix}PASS=${smtpPass}`, ''],
+          [`${prefix}TO=${to}`, '']
+        ]);
+      } else {
+        const webhookUrl = await input({
+          message: 'Webhook URL',
+          validate: (v: string) => (v.startsWith('https://') ? true : '请输入完整的 https:// URL')
+        });
+        const optKey =
+          channel === 'wecom'
+            ? 'wecomWebhook'
+            : channel === 'feishu'
+              ? 'feishuWebhook'
+              : channel === 'dingtalk'
+                ? 'dingtalkWebhook'
+                : 'webhook';
+        const envKey = `VG_NOTIFY_${channel.toUpperCase()}`;
+        plugins.push({name: 'notify', options: {[optKey]: `env:${envKey}`}});
+        await _writeEnvExample(process.cwd(), [
+          ['# Visual Guard — 通知 Webhook', ''],
+          [`${envKey}=${webhookUrl}`, '']
+        ]);
+      }
+    }
+
     const config = {
       project,
       env: 'development',
@@ -113,7 +178,8 @@ export function createInitCommand(): Command {
         tags: ['smoke'],
         waitForSelector: 'body'
       })),
-      reporters: formatList
+      reporters: formatList,
+      plugins
     };
 
     // 校验
@@ -131,6 +197,11 @@ export function createInitCommand(): Command {
 
     logger.info('');
     logger.info(chalk.green(`✅ 配置文件已生成: ${filePath}`));
+    if (plugins.length > 0) {
+      logger.info('');
+      logger.info('⚠ 通知插件使用 env: 前缀引用环境变量，请设置对应的环境变量后运行');
+      logger.info('  参考 .env.example 文件了解所需变量');
+    }
     logger.info('');
     logger.info('接下来:');
     logger.info(chalk.white(`  visual-guard run -c ${path.basename(filePath)}`));
@@ -138,4 +209,22 @@ export function createInitCommand(): Command {
   });
 
   return cmd;
+}
+
+/**
+ * 将敏感环境变量写入 .env.example 文件（追加模式）
+ * 避免密码/授权码等直接写入配置文件中
+ */
+async function _writeEnvExample(cwd: string, entries: Array<[string, string]>): Promise<void> {
+  const filePath = path.join(cwd, '.env.example');
+  try {
+    // read existing content to avoid duplicates
+    const existing = await fs.readFile(filePath, 'utf-8').catch(() => '');
+    const lines = entries.filter(([k]) => !existing.includes(k.split('=')[0] ?? ''));
+    if (lines.length === 0) return;
+    const content = (existing ? `${existing}\n` : '') + lines.map(([k]) => k).join('\n') + '\n';
+    await fs.writeFile(filePath, content, 'utf-8');
+  } catch {
+    // 写入 .env.example 失败不阻断主流程
+  }
 }

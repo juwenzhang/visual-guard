@@ -1,4 +1,5 @@
 // biome-ignore-all lint/complexity/useLiteralKeys: launchOpts 是 Record 类型，TS 要求方括号访问
+import {execSync} from 'node:child_process';
 import type {
   BaselineBundle,
   BrowserEngineAdapter,
@@ -15,6 +16,7 @@ import {diffDom, diffLayout, diffNetwork, diffPerformance, diffPixel} from './di
 import type {PluginEventBus} from './plugin-event-bus';
 import {loadPlugins} from './plugin-loader';
 import {resolveScenes} from './scene-resolver';
+import {generateSemanticReport} from './semantic-diff';
 import {HOOK_NAMES, type HookContext} from './types';
 
 /**
@@ -37,6 +39,23 @@ export interface RunnerOptions {
   eventBus?: PluginEventBus;
 }
 
+/** 获取当前 Git 分支名 */
+function getCurrentBranch(): string {
+  // 1. 环境变量（CI 中常用）
+  const envBranch =
+    process.env['VG_BRANCH'] ??
+    process.env['CI_COMMIT_BRANCH'] ??
+    process.env['GITHUB_HEAD_REF'] ??
+    process.env['GIT_BRANCH'] ??
+    process.env['BRANCH_NAME'];
+  if (envBranch) return envBranch;
+  // 2. git CLI（通用 fallback）
+  try {
+    return execSync('git rev-parse --abbrev-ref HEAD', {encoding: 'utf-8'}).trim();
+  } catch {}
+  return 'unknown';
+}
+
 /** 构造基础 HookContext */
 function baseCtx(
   config: VisualGuardConfig,
@@ -47,7 +66,7 @@ function baseCtx(
     runId,
     project: config.project,
     env: config.env,
-    branch: 'main',
+    branch: getCurrentBranch(),
     config,
     ...overrides
   };
@@ -194,7 +213,8 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
           );
 
           const captureResult = await captureScene(scene, context, {
-            timeout: config.timeout ?? 30000
+            timeout: config.timeout ?? 30000,
+            stabilize: config.stabilize
           });
 
           await eventBus?.emit(
@@ -213,7 +233,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
           const key = {
             project: config.project,
             env: config.env,
-            branch: 'main',
+            branch: getCurrentBranch(),
             sceneId: scene.id,
             viewport: scene.viewport.name,
             deviceScaleFactor: scene.viewport.deviceScaleFactor ?? 1,
@@ -345,8 +365,15 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
               network: networkResult,
               performance: performanceResult
             },
-            errors: []
+            errors: [],
+            // 生成语义化差异报告（AI/人类可读）
+            semantic: undefined
           };
+
+          // diff 完成后生成语义化报告
+          if (status !== 'passed') {
+            result.semantic = generateSemanticReport(result);
+          }
 
           await eventBus?.emit(
             HOOK_NAMES.AfterCompare,
@@ -418,7 +445,7 @@ export async function run(options: RunnerOptions): Promise<DiffManifest> {
         id: runId,
         project: config.project,
         env: config.env,
-        branch: 'main',
+        branch: getCurrentBranch(),
         startedAt: startTime.toISOString(),
         endedAt: new Date().toISOString()
       },

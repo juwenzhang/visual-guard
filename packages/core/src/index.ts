@@ -45,6 +45,8 @@ export {run} from './runner';
 export type {ResolvedScene} from './scene-resolver';
 // 场景解析
 export {resolveScenes} from './scene-resolver';
+// 语义化差异
+export {generateSemanticReport} from './semantic-diff';
 export type {
   HookContext,
   HookEvents,
