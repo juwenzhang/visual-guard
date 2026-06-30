@@ -1,71 +1,80 @@
 # Visual Guard
 
-Visual Guard 是一个面向前端页面的自动化视觉回归与页面质量检测工具。
+> 📖 [中文](./README.zh-CN.md)
 
-核心链路：
+Automated visual regression and page quality testing tool. Config-driven scenarios → browser capture → baseline read/write → multi-dimensional diff → reports + notifications.
 
 ```text
-配置化场景 -> 浏览器采集 -> 基线读写 -> 多维 diff -> DiffManifest -> 报告/插件消费
+Config-driven scenarios → browser capture → baseline I/O → multi-dimensional diff → DiffManifest → reports + plugins
 ```
 
-## 当前状态
+## Status
 
-| 模块 | 状态 | 说明 |
-|------|------|------|
-| `@visual-guard/shared` | ✅ | 类型、日志、工具、路径 |
-| `@visual-guard/config` | ✅ | `visualguard.config.*` 自动发现 + zod 校验 |
-| `@visual-guard/core` | ✅ | runner / capture / diff / baseline / `--write-baseline` |
-| `@visual-guard/engine-playwright` | ✅ 推荐 | 默认稳定引擎，当前主线维护 |
-| `@visual-guard/engine-cypress` | 🟡 桥接中 | Cypress 与 Page API 模型不同，后续走 spec + task 桥接 |
-| `@visual-guard/engine-puppeteer` | ⚠️ 暂停 | 版本 / Chrome 缓存 / 生命周期坑较多，暂不作为主线 |
-| `@visual-guard/cli` | ✅ | `run` / `init` / `baseline list` / `baseline clean` |
-| `@visual-guard/reporters` | ✅ | Console / JSON / HTML |
-| `plugin-*` | ⚪ | notify / ai / perf / archive 暂为骨架 |
+| Package | Status | Description |
+|---------|--------|-------------|
+| `@visual-guard/shared` | ✅ | Types, logging, utilities, paths |
+| `@visual-guard/config` | ✅ | `visualguard.config.*` auto-discovery + zod validation + env overrides |
+| `@visual-guard/core` | ✅ | runner / capture / stabilize / diff / semantic-diff / baseline / branch detection |
+| `@visual-guard/engine-playwright` | ✅ | Default stable engine, mainline maintenance |
+| `@visual-guard/engine-puppeteer` | ⚠️ | Experimental, available as fallback |
+| `@visual-guard/cli` | ✅ | `run` / `init` (with notify config) / `baseline list` / `baseline clean` |
+| `@visual-guard/reporters` | ✅ | HTML (sidebar + tab panels) / JSON (summary split) / Console |
+| `@visual-guard/plugin-notify` | ✅ | WeCom / Feishu / DingTalk Webhooks + QQ Email SMTP + Generic Webhook |
+| `@visual-guard/plugin-perf` | ✅ | LCP / FCP / CLS / TTFB collection + budget checks |
+| `@visual-guard/plugin-ai` | ⚪ | AI-powered diff explanation (skeleton) |
+| `@visual-guard/plugin-archive` | ⚪ | Report archiving (skeleton) |
 
-## 引擎策略
+## Key Features
 
-当前主线只保证 **macOS / Linux**，暂不适配 Windows。
+- **Dynamic content stabilization** — Freezes `Date`, disables CSS animations, freezes `rAF` before screenshots to reduce false positives
+- **Semantic diff** — Converts pixelmatch / deep-diff raw output into natural language descriptions consumable by AI
+- **5-dimensional comparison** — Pixel / DOM structure / Layout shift / Network requests / Performance metrics
+- **Rich HTML reports** — Sidebar navigation + 7 tab panels + diff overlay + blink comparator + performance dashboard + responsive design
+- **Multi-channel notifications** — WeCom / Feishu / DingTalk Webhooks + QQ Email + Generic Webhook, with `env:` prefix for secrets
+- **Auto branch detection** — Reads current Git branch automatically, no manual config needed
 
-- **Playwright**：主推荐引擎，负责稳定采集闭环。
-- **Cypress**：作为已有 Cypress 项目的桥接方案，后续不复刻 Page API，而是生成 Cypress spec，通过 `cy.visit` / `cy.screenshot` / `cy.task` 输出采集产物。
-- **Puppeteer**：保留实验包，但暂不投入主线。已确认其在多版本 monorepo、Chrome revision、headless、连接生命周期上存在较多不稳定点。
+## Engine Strategy
 
-## 快速开始
+Currently tested on **macOS / Linux** only.
+
+- **Playwright** — Recommended engine, default stable pipeline.
+- **Puppeteer** — Experimental package, available as alternative.
+
+## Quick Start
 
 ```bash
 pnpm install
 pnpm run typecheck
-pnpm run lint
 pnpm run build
 ```
 
-独立工程示例：
+Standalone example:
 
 ```bash
 cd examples/standalone
-pnpm guard:run              # Playwright 主线
-pnpm guard:baseline         # 查看基线
-pnpm guard:clean            # 清理基线预览
+pnpm guard:run              # Playwright mainline
+pnpm guard:run:puppeteer    # Puppeteer alternative
+pnpm guard:baseline         # View baselines
+pnpm guard:clean            # Clean basiline preview
 ```
 
-## 包结构
+## Package Structure
 
 ```text
 packages/
-  shared/             # 共享类型、工具函数、日志、路径工具
-  config/             # 配置加载、默认值、环境变量覆盖、schema 校验
-  core/               # 场景执行、采集、基线、diff、manifest 聚合
-  engine-playwright/  # Playwright 引擎适配器（主线）
-  engine-cypress/     # Cypress 项目桥接适配器（规划中）
-  engine-puppeteer/   # Puppeteer 实验适配器（暂停主线投入）
-  cli/                # 命令行入口
-  reporters/          # HTML / JSON / Console 报告器
-  plugin-notify/      # 通知插件
-  plugin-ai/          # AI 分析插件
-  plugin-perf/        # 性能插件
-  plugin-archive/     # 归档插件
+  shared/             # Shared types, utilities, logging, path helpers
+  config/             # Config loading, defaults, env overrides, schema validation
+  core/               # Scene execution, capture, stabilization, baseline, diff, semantic-diff
+  engine-playwright/  # Playwright adapter (mainline)
+  engine-puppeteer/   # Puppeteer adapter (experimental)
+  cli/                # CLI entry (run / init / baseline)
+  reporters/          # HTML / JSON (summary+manifest) / Console reporters
+  plugin-notify/      # IM + email notifications
+  plugin-perf/        # Web Vitals collection + budget checks
+  plugin-ai/          # AI analysis plugin (planned)
+  plugin-archive/     # Archive plugin (planned)
 ```
 
-## 项目记忆
+## Project Memory
 
-项目推进记录保存在：`memory/progress.md`。
+Progress tracking in `memory/progress.md`.

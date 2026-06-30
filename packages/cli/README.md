@@ -1,40 +1,85 @@
 # @visual-guard/cli
 
-Visual Guard 命令行入口。
+Visual Guard command-line interface.
 
-## 安装
+## Install
 
 ```bash
 pnpm add -D @visual-guard/cli @visual-guard/engine-playwright
 ```
 
-引擎是可选 peer dependency，按需安装：
+Engines are optional peer dependencies — install the one you need:
 
 ```bash
-pnpm add -D @visual-guard/engine-playwright   # 推荐主线
-pnpm add -D @visual-guard/engine-cypress cypress
+pnpm add -D @visual-guard/engine-playwright   # recommended
+pnpm add -D @visual-guard/engine-puppeteer    # experimental
 ```
 
-`@visual-guard/engine-puppeteer` 保留实验包，暂不推荐作为主线。
-
-## 命令
+## Commands
 
 ```bash
+# Interactive config generation
 visual-guard init
+
+# Run visual regression tests
 visual-guard run
 visual-guard run --engine playwright
 visual-guard run --write-baseline
+visual-guard run --engine puppeteer
+visual-guard run --format html,json,console
+
+# Baseline management
 visual-guard baseline list
 visual-guard baseline clean --dry-run
-
-# Cypress 桥接
-visual-guard cypress spec   # 生成 cypress/e2e/visual-guard.generated.cy.js + cypress.config.js
-visual-guard cypress run --browser electron
-# 如需接近 Chrome 渲染，可显式指定：visual-guard cypress run --browser chrome
 ```
 
-## 引擎策略
+## `init` — Interactive Setup
 
-- `playwright`：稳定主线，`visual-guard run` 默认使用。
-- `cypress`：桥接模式，通过 `visual-guard cypress spec` 生成 Cypress spec，再由 Cypress 执行。
-- `puppeteer`：实验性，暂停主线投入。
+Walks through interactive prompts to generate `visualguard.config.json`:
+
+1. Project name
+2. Base URL
+3. Browser engine (playwright / puppeteer)
+4. Headless mode
+5. Scenarios (name + path, add multiple)
+6. Report formats
+7. **Notification setup** (optional) — WeCom / Feishu / DingTalk / QQ Email / Generic Webhook
+
+Sensitive values in the config use `env:` prefix references. A `.env.example` file is generated alongside with the actual values for you to set as environment variables.
+
+```json
+{
+  "plugins": [{
+    "name": "notify",
+    "options": {
+      "email": {
+        "user": "env:VG_EMAIL_USER",
+        "pass": "env:VG_EMAIL_PASS"
+      }
+    }
+  }]
+}
+```
+
+## `run` — Execute Tests
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Config file path |
+| `--engine <engine>` | Browser engine (playwright / puppeteer) |
+| `--scenes <scenes>` | Run specific scenes (comma-separated) |
+| `--tags <tags>` | Filter scenes by tags |
+| `--env <env>` | Environment name override |
+| `--write-baseline` | Update baselines for subsequent comparison |
+| `--format <format>` | Report formats (html,json,console) |
+
+Exit codes: `0` = all passed | `1` = diffs detected | `2` = errors
+
+## Engines
+
+- **playwright** — Stable mainline, default engine
+- **puppeteer** — Experimental, available as fallback
+
+## License
+
+[MIT](./LICENSE) © luhanxin

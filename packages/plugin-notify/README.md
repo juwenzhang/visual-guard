@@ -1,29 +1,85 @@
 # @visual-guard/plugin-notify
 
-通知插件包（规划中）。
+Post-run notification plugin for Visual Guard. Sends structured diff summaries via webhook or email.
 
-## 目标能力
+## Supported Channels
 
-- 企业微信机器人
-- 飞书机器人
-- 钉钉机器人
-- 邮件通知
+| Channel | Config Key | Notes |
+|---------|-----------|-------|
+| WeCom Bot | `wecomWebhook` | Markdown card format |
+| Feishu Bot | `feishuWebhook` | Plain text push |
+| DingTalk Bot | `dingtalkWebhook` | Markdown push |
+| Email (SMTP) | `email` | HTML email with stats cards, perf tables, layout shifts |
+| Generic Webhook | `webhook` | POST JSON payload |
 
-## 设计原则
+## Usage
 
-插件只消费 `DiffManifest` 和 `PluginAPI`，不直接访问 core 内部状态。
-
-## 计划
-
-```ts
-import { createNotifyPlugin } from '@visual-guard/plugin-notify';
-
-plugins: [
-  createNotifyPlugin({
-    channels: ['wecom'],
-    webhook: process.env.VG_NOTIFY_WEBHOOK,
-  }),
-]
+```json
+{
+  "plugins": [
+    {
+      "name": "notify",
+      "options": {
+        "wecomWebhook": "env:VG_WECOM_WEBHOOK",
+        "onlyOnChange": true,
+        "maxChanges": 5
+      }
+    }
+  ]
+}
 ```
 
-当前包仍为骨架，后续在插件系统落地后实现。
+### Email example
+
+```json
+{
+  "plugins": [{
+    "name": "notify",
+    "options": {
+      "email": {
+        "host": "smtp.qq.com",
+        "port": 465,
+        "user": "env:VG_EMAIL_USER",
+        "pass": "env:VG_EMAIL_PASS",
+        "to": "env:VG_EMAIL_TO"
+      }
+    }
+  }]
+}
+```
+
+## Environment Variable References
+
+Any config value can use the `env:` prefix to reference environment variables, keeping secrets out of config files:
+
+```json
+{ "pass": "env:VG_EMAIL_PASS" }
+```
+
+The plugin resolves `env:KEY` → `process.env.KEY` at startup.
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `wecomWebhook` | `string` | — | WeCom bot webhook URL |
+| `feishuWebhook` | `string` | — | Feishu bot webhook URL |
+| `dingtalkWebhook` | `string` | — | DingTalk bot webhook URL |
+| `webhook` | `string` | — | Generic webhook URL |
+| `email` | `object` | — | SMTP email config (host, port, user, pass, to) |
+| `title` | `string` | `"Visual Guard — {project}/{env}"` | Notification title template |
+| `onlyOnChange` | `boolean` | `true` | Skip notification when all scenarios pass |
+| `maxChanges` | `number` | `5` | Max semantic changes shown per scenario |
+
+## Hook
+
+Registers on `AfterReport`. Receives the full `DiffManifest` and builds notifications from:
+- `manifest.summary` (stats cards)
+- `scenario.semantic` (human-readable change descriptions)
+- `scenario.diffs.performance` (perf comparison table)
+- `scenario.diffs.layout` (top 5 element shifts)
+- `scenario.diffs.network` (request changes summary)
+
+## License
+
+[MIT](./LICENSE) © luhanxin
