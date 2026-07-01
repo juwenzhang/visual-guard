@@ -12,7 +12,7 @@ pnpm add -D @visual-guard/cli @visual-guard/engine-playwright
 
 ```bash
 pnpm add -D @visual-guard/engine-playwright   # 推荐主线
-pnpm add -D @visual-guard/engine-puppeteer    # 实验性
+pnpm add -D @visual-guard/engine-puppeteer    # 备选引擎
 ```
 
 ## 命令
@@ -78,7 +78,7 @@ visual-guard baseline clean --dry-run
 ## 引擎策略
 
 - **playwright** — 稳定主线，默认引擎
-- **puppeteer** — 实验性，可作为备选
+- **puppeteer** — 完全可用的备选引擎，自动探测本机 Chrome 路径
 
 ## License
 

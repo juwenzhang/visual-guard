@@ -16,7 +16,7 @@ Config-driven scenarios → browser capture → baseline I/O → multi-dimension
 | `@visual-guard/config` | ✅ | `visualguard.config.*` auto-discovery + zod validation + env overrides |
 | `@visual-guard/core` | ✅ | runner / capture / stabilize / diff / semantic-diff / baseline / branch detection |
 | `@visual-guard/engine-playwright` | ✅ | Default stable engine, mainline maintenance |
-| `@visual-guard/engine-puppeteer` | ⚠️ | Experimental, available as fallback |
+| `@visual-guard/engine-puppeteer` | ✅ | Fully functional, available as alternative |
 | `@visual-guard/cli` | ✅ | `run` / `init` (with notify config) / `baseline list` / `baseline clean` |
 | `@visual-guard/reporters` | ✅ | HTML (sidebar + tab panels) / JSON (summary split) / Console |
 | `@visual-guard/plugin-notify` | ✅ | WeCom / Feishu / DingTalk Webhooks + QQ Email SMTP + Generic Webhook |
@@ -38,7 +38,7 @@ Config-driven scenarios → browser capture → baseline I/O → multi-dimension
 Currently tested on **macOS / Linux** only.
 
 - **Playwright** — Recommended engine, default stable pipeline.
-- **Puppeteer** — Experimental package, available as alternative.
+- **Puppeteer** — Fully functional alternative engine, auto-detects system Chrome.
 
 ## Quick Start
 

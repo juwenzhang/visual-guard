@@ -7,7 +7,7 @@ import {
   generateJsonReport,
   generateReportsIndex
 } from '@visual-guard/reporters';
-import type {BrowserEngineAdapter} from '@visual-guard/shared';
+import type {BrowserEngineAdapter, VisualGuardConfig} from '@visual-guard/shared';
 import {logger} from '@visual-guard/shared';
 import chalk from 'chalk';
 import {Command} from 'commander';
@@ -95,6 +95,11 @@ export function createRunCommand(): Command {
         // 索引生成失败不阻断主流程
       });
 
+      // 自动入库趋势数据
+      await _autoIngest(manifest.run.id, config).catch(() => {
+        // 入库失败不阻断主流程
+      });
+
       if (formats.includes('console')) {
         const output = generateConsoleReport(manifest, reportFiles);
         process.stdout.write(output);
@@ -169,4 +174,60 @@ function _resolveFormats(
   const raw = cliFormat ?? configReporters.join(',');
   const parts = raw.split(',').map(s => s.trim().toLowerCase());
   return parts.filter((f): f is ReporterFormat => VALID_REPORTER_FORMATS.has(f));
+}
+
+/**
+ * 自动入库：将本次运行的 summary.json + manifest.json 压入本地 SQLite
+ */
+async function _autoIngest(runId: string, config: VisualGuardConfig): Promise<void> {
+  const storageCfg = config.storage;
+  if (!storageCfg?.dsn) return; // 未配置存储则跳过
+
+  const dsn = storageCfg.dsn;
+  if (!dsn.startsWith('sqlite://')) return; // 仅本地 SQLite 自动入库，远程走 storage ingest 手动触发
+
+  try {
+    const {readFile} = await import('node:fs/promises');
+    const {join} = await import('node:path');
+    const {gzipSync} = await import('node:zlib');
+    const {SQLiteAdapter} = await import('@visual-guard/server');
+
+    const outputDir = config.outputDir ?? '.visual-guard/reports';
+    const runDir = join(outputDir, runId);
+    const summaryPath = join(runDir, 'summary.json');
+    const manifestPath = join(runDir, 'manifest.json');
+
+    const summaryRaw = await readFile(summaryPath, 'utf-8');
+    const data = JSON.parse(summaryRaw) as Record<string, unknown>;
+    const run = data['run'] as Record<string, string>;
+
+    let manifestBuf: Buffer | undefined;
+    try {
+      manifestBuf = gzipSync(await readFile(manifestPath, 'utf-8'));
+    } catch {
+      /* ok */
+    }
+
+    const dbPath = dsn.slice('sqlite://'.length);
+    const {mkdir} = await import('node:fs/promises');
+    const {dirname} = await import('node:path');
+    await mkdir(dirname(dbPath), {recursive: true});
+
+    const adapter = new SQLiteAdapter(dbPath);
+    await adapter.ingest({
+      id: run['id'] ?? runId,
+      project: run['project'] ?? config.project,
+      env: run['env'] ?? config.env,
+      branch: run['branch'] ?? 'unknown',
+      startedAt: run['startedAt'] ?? new Date().toISOString(),
+      endedAt: run['endedAt'] ?? new Date().toISOString(),
+      summary: (data['summary'] as Record<string, unknown>) ?? {},
+      trends: (data['trends'] as Record<string, unknown>) ?? {},
+      manifest: manifestBuf
+    });
+    await adapter.close();
+    logger.info('📊 趋势数据已自动入库');
+  } catch {
+    // 入库失败不影响主流程
+  }
 }

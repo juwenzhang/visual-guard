@@ -35,7 +35,7 @@ export function createInitCommand(): Command {
       message: '浏览器引擎',
       choices: [
         {name: 'playwright (推荐)', value: 'playwright'},
-        {name: 'puppeteer (实验性)', value: 'puppeteer'}
+        {name: 'puppeteer', value: 'puppeteer'}
       ]
     });
 
@@ -150,6 +150,27 @@ export function createInitCommand(): Command {
       }
     }
 
+    // Server & 存储配置
+    const enableServer = await confirm({
+      message: '启用趋势 Dashboard（visual-guard serve）？',
+      default: false
+    });
+    const serverCfg: Record<string, unknown> | undefined = enableServer
+      ? {
+          port: Number(await input({message: 'Dashboard 端口', default: '3456'})),
+          host: '0.0.0.0'
+        }
+      : undefined;
+
+    let storageCfg: Record<string, unknown> | undefined;
+    if (enableServer || plugins.length > 0) {
+      const dsn = await input({
+        message: '趋势数据存储路径',
+        default: 'sqlite://.visual-guard/vg.db'
+      });
+      storageCfg = {dsn};
+    }
+
     const config = {
       project,
       env: 'development',
@@ -179,7 +200,9 @@ export function createInitCommand(): Command {
         waitForSelector: 'body'
       })),
       reporters: formatList,
-      plugins
+      plugins,
+      ...(serverCfg ? {server: serverCfg} : {}),
+      ...(storageCfg ? {storage: storageCfg} : {})
     };
 
     // 校验

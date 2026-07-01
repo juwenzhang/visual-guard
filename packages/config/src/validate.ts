@@ -148,7 +148,19 @@ const VisualGuardConfigSchema = z.object({
   scenarios: z.array(SceneConfigSchema).min(1, 'scenarios 至少配置一个场景'),
   reporters: z.array(ReporterTypeSchema).optional(),
   stabilize: StabilizeConfigSchema.optional(),
-  plugins: z.array(PluginConfigSchema).optional()
+  plugins: z.array(PluginConfigSchema).optional(),
+  server: z
+    .object({
+      port: z.number().int().positive().optional(),
+      host: z.string().optional(),
+      apiKey: z.string().optional()
+    })
+    .optional(),
+  storage: z
+    .object({
+      dsn: z.string().optional()
+    })
+    .optional()
 });
 
 /**

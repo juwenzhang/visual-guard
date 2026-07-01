@@ -223,6 +223,30 @@ export interface VisualGuardConfig {
   stabilize?: StabilizeConfig;
   /** 插件列表 */
   plugins?: PluginConfig[];
+  /** Server 配置（visual-guard serve 时使用） */
+  server?: ServerConfig;
+  /** 存储配置（visual-guard storage 命令 + serve 共用） */
+  storage?: StorageConfig;
+}
+
+/**
+ * Server 配置
+ */
+export interface ServerConfig {
+  /** 服务端口，默认 3456 */
+  port?: number;
+  /** 绑定地址，默认 "0.0.0.0" */
+  host?: string;
+  /** API 鉴权密钥，空则无鉴权 */
+  apiKey?: string;
+}
+
+/**
+ * 存储配置
+ */
+export interface StorageConfig {
+  /** 存储连接串，如 "sqlite://./vg.db" 或 "postgres://..." */
+  dsn?: string;
 }
 
 /**

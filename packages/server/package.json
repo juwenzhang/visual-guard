@@ -1,0 +1,55 @@
+{
+  "name": "@visual-guard/server",
+  "version": "0.0.0",
+  "description": "HTTP server and trend storage for Visual Guard.",
+  "keywords": [
+    "visual-guard",
+    "visual-regression",
+    "server"
+  ],
+  "license": "MIT",
+  "author": "luhanxin",
+  "repository": {
+    "type": "git",
+    "url": "",
+    "directory": "packages/server"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup && cp src/dash.html dist/dash.html",
+    "dev": "tsup --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "@visual-guard/shared": "workspace:*",
+    "better-sqlite3": "^12.11.1",
+    "fastify": "^5.0.0"
+  }
+}

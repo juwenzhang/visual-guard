@@ -83,8 +83,10 @@ function _baselinePerformanceDiffs(captureResult: {
     {key: 'LCP', value: perf.navigation['largestContentfulPaint']},
     {key: 'FCP', value: perf.navigation['firstContentfulPaint']},
     {key: 'CLS', value: perf.navigation['cumulativeLayoutShift']},
-    {key: 'TTFB', value: perf.navigation['timeToFirstByte']}
-  ].filter(m => m.value !== undefined);
+    {key: 'TTFB', value: perf.navigation['timeToFirstByte']},
+    {key: 'DCL', value: perf.navigation['domContentLoaded']},
+    {key: 'Load', value: perf.navigation['load']}
+  ].filter(m => m.value !== undefined && m.value > 0);
 
   return {
     performance: {

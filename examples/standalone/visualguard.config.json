@@ -8,7 +8,7 @@
   "concurrency": 1,
   "timeout": 30000,
   "browser": {
-    "engine": "playwright",
+    "engine": "puppeteer",
     "headless": true,
     "launchOptions": {
       "args": ["--ignore-certificate-errors", "--disable-web-security"]
@@ -44,6 +44,7 @@
   ],
   "reporters": ["console", "json", "html"],
   "plugins": [
+    { "name": "perf" },
     {
       "name": "notify",
       "options": {

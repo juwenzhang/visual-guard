@@ -33,7 +33,9 @@ export type {
   RenderMode,
   ReporterType,
   SceneConfig,
+  ServerConfig,
   StabilizeConfig,
+  StorageConfig,
   ViewportConfig,
   VisualGuardConfig
 } from './types/config';

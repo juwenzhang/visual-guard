@@ -76,7 +76,14 @@ export const DEFAULT_CONFIG: Partial<VisualGuardConfig> = {
   reporters: [...defaultReporters],
   renderMode: 'auto' as const,
   stabilize: defaultStabilize,
-  plugins: []
+  plugins: [],
+  server: {
+    port: 3456,
+    host: '0.0.0.0'
+  },
+  storage: {
+    dsn: 'sqlite://.visual-guard/vg.db'
+  }
 };
 
 /**

@@ -8,6 +8,8 @@ import {Command} from 'commander';
 import {createBaselineCommand} from './commands/baseline';
 import {createInitCommand} from './commands/init';
 import {createRunCommand} from './commands/run';
+import {createServeCommand} from './commands/server';
+import {createStorageCommand} from './commands/storage';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8')) as {
@@ -23,7 +25,9 @@ program
   .version(pkg.version)
   .addCommand(createInitCommand())
   .addCommand(createRunCommand())
-  .addCommand(createBaselineCommand());
+  .addCommand(createBaselineCommand())
+  .addCommand(createServeCommand())
+  .addCommand(createStorageCommand());
 
 export function main(argv: string[] = process.argv): void {
   program.parse(argv);

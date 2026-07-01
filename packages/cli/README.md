@@ -12,7 +12,7 @@ Engines are optional peer dependencies — install the one you need:
 
 ```bash
 pnpm add -D @visual-guard/engine-playwright   # recommended
-pnpm add -D @visual-guard/engine-puppeteer    # experimental
+pnpm add -D @visual-guard/engine-puppeteer    # alternative
 ```
 
 ## Commands
@@ -78,7 +78,7 @@ Exit codes: `0` = all passed | `1` = diffs detected | `2` = errors
 ## Engines
 
 - **playwright** — Stable mainline, default engine
-- **puppeteer** — Experimental, available as fallback
+- **puppeteer** — Fully functional alternative, auto-detects system Chrome
 
 ## License
 

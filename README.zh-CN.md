@@ -16,7 +16,7 @@
 | `@visual-guard/config` | ✅ | `visualguard.config.*` 自动发现 + zod 校验 + 环境变量覆盖 |
 | `@visual-guard/core` | ✅ | runner / capture / stabilize / diff / semantic-diff / baseline / 分支检测 |
 | `@visual-guard/engine-playwright` | ✅ | 默认稳定引擎，主线维护 |
-| `@visual-guard/engine-puppeteer` | ⚠️ | 实验包，可作为备选 |
+| `@visual-guard/engine-puppeteer` | ✅ | 完全可用，自动探测本机 Chrome，作为备选引擎 |
 | `@visual-guard/cli` | ✅ | `run` / `init`（含通知配置）/ `baseline list` / `baseline clean` |
 | `@visual-guard/reporters` | ✅ | HTML（侧边栏+TAB）/ JSON（summary 拆分）/ Console |
 | `@visual-guard/plugin-notify` | ✅ | 企微/飞书/钉钉 Webhook + QQ 邮箱 SMTP + 通用 Webhook |
@@ -38,7 +38,7 @@
 当前主线仅保证 **macOS / Linux**。
 
 - **Playwright**：主推荐引擎，默认稳定采集闭环。
-- **Puppeteer**：保留实验包，作为备选方案。
+- **Puppeteer**：完全可用的备选引擎，自动探测本机 Chrome 路径。
 
 ## 快速开始
 
